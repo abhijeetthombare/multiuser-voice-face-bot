@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Multi-User Voice Bot (Smart Wake-Up Focus Mode)")
+st.title("🤖 Next-Gen Multi-User Voice Bot (Smart Auto-Refresh)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -90,13 +90,13 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (NO-REFRESH WAKE-UP FIX)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (IFRAME REFRESH FIX)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE PURE FOCUS WAKE-UP ENGINE (NO REFRESH NEEDED) ---
+    # --- 🎙️ JAVASCRIPT: THE IFRAME AUTO-REFRESH ENGINE ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
         <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
@@ -116,27 +116,18 @@ else:
 
             function executeInstantAction(intentUrl) {
                 actionExecuted = true; 
-                window.open(intentUrl, '_blank'); // ॲप नवीन टॅबमध्ये सुसाट उघडेल
-                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Return to this screen to continue...</span>";
-                recognition.stop(); // ॲप उघडताना माईक थांबवा
+                window.open(intentUrl, '_blank'); 
+                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Will Auto-Refresh Engine when you return.</span>";
+                recognition.stop(); 
             }
 
-            // 🔥 हा आहे तो कडक मास्टर सेन्सर: युझर परत आला की पेज रिफ्रेश न करता फक्त माईक ऑन कर!
-            function wakeUpSystem() {
-                if (actionExecuted) {
-                    actionExecuted = false; // ट्रॅकर रिसेट
-                    document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 Welcome back! Mic is ACTIVE again. Speak now!</span>";
-                    setTimeout(() => {
-                        try { recognition.start(); } catch(e) {}
-                    }, 500); // 0.5 सेकंदात माईक जिवंत!
-                }
-            }
-
-            // मोबाईलमध्ये टॅब फोकसवर लक्ष ठेवणारे दोन मजबूत सेन्सर्स
-            window.addEventListener("focus", wakeUpSystem);
+            // 🔥 जादुई सेन्सर: आता अख्खं पेज नाही, फक्त माईकचा बॉक्स रिफ्रेश होईल (No Streamlit Error!)
             document.addEventListener("visibilitychange", function() {
-                if (document.visibilityState === "visible") {
-                    wakeUpSystem();
+                if (document.visibilityState === "visible" && actionExecuted === true) {
+                    document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>🔄 Auto-Refreshing Voice Engine...</span>";
+                    setTimeout(() => {
+                        window.location.reload(); // हे फक्त या बॉक्सला रिफ्रेश करेल आणि माईक नवाकोरा होईल!
+                    }, 800);
                 }
             });
 
@@ -158,7 +149,6 @@ else:
                 if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
                     let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
                     
-                    // 📱 मूळ अँड्रॉइड ॲप्स
                     if (cleanCmd.includes("whatsapp")) {
                         executeInstantAction("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
                     } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
@@ -172,8 +162,6 @@ else:
                     } else if (cleanCmd.includes("mail") || cleanCmd.includes("gmail")) {
                         executeInstantAction("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end");
                     }
-                    
-                    // 📶 सिस्टीम हार्डवेअर
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
                         executeInstantAction("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
@@ -196,7 +184,6 @@ else:
                 }
             };
 
-            // सुरुवातीला माईक चालू करा
             try { recognition.start(); } catch(e) {}
         }
     </script>
