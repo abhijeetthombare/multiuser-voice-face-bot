@@ -90,23 +90,14 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% WORKING FRONTEND ENGINE)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% NON-STOP VOICE)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
-    # जुना रिकामा टेक्स्ट बॉक्स लपवण्यासाठी CSS
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stTextInput"] {
-            display: none !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    # इनपुट बॉक्स लपवण्यासाठी CSS
+    st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT POPUP-BLOCKER BYPASS ENGINE (ULTIMATE WORK FIX) ---
+    # --- 🎙️ JAVASCRIPT NON-STOP VOICE INTERFACE (LOOP FIXED) ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
         <p style="margin:0; font-weight:bold; color:#1f77b4;">🗣️ Live Speech (तुमचा आवाज): <span id="speech-live" style="color:#333; font-weight:normal;">Waiting for voice...</span></p>
@@ -124,23 +115,21 @@ else:
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
-            // 👑 क्रोम सुरक्षा तोडणारं अधिकृत ऑटो-क्लिक इंजिन फंक्शन
+            // एकच कमांड पुन्हा पुन्हा एक्झिक्युट होऊ नये म्हणून २ सेकंदाचा कुलडाऊन लॉक
+            let lastExecutionTime = 0;
+
             function executeAction(intentUrl) {
-                recognition.stop(); // माईक तात्पुरता थांबवा
-                
+                // 🛑 माईक अजिबात बंद होणार नाही (recognition.stop() काढून टाकलाय!)
                 const triggerBtn = document.getElementById("force-trigger");
                 triggerBtn.href = intentUrl;
-                triggerBtn.style.display = "block"; // स्क्रीनवर निळं बटण दिसेल
+                triggerBtn.style.display = "block";
                 
-                // ⚡ जादुई ऑटो-क्लिक इव्हेंट सिम्युलेशन (Chrome Security Bypass!)
                 setTimeout(() => {
                     triggerBtn.click();
-                }, 100);
+                }, 500);
 
-                // २ सेकंदात अ‍ॅप उघडून माईक पुन्हा continuous मोडवर येईल
                 setTimeout(() => {
                     triggerBtn.style.display = "none";
-                    try { recognition.start(); } catch(err) {}
                 }, 2000);
             }
 
@@ -160,44 +149,56 @@ else:
                 document.getElementById("speech-live").innerText = currentText;
                 
                 const query = currentText.toLowerCase().trim();
+                const now = Date.now();
                 
-                if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
+                // जर आवाजात 'python' असेल आणि मागच्या कमांडला २ सेकंद झाले असतील तरच ट्रिगर होणार
+                if ((query.includes("python") || query.includes("paithen") || query.includes("py")) && (now - lastExecutionTime > 2000)) {
                     let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
                     
-                    // 📱 १. मोबाईल ओरिजिनल ॲप्स थेट इंटेंट्स (पॉपअप ब्लॉकर बायपास)
+                    // 📱 १. मोबाईल ओरिजिनल ॲप्स थेट इंटेंट्स
                     if (cleanCmd.includes("whatsapp")) {
+                        lastExecutionTime = now;
                         executeAction("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
                     } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
+                        lastExecutionTime = now;
                         executeAction("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
                     } else if (cleanCmd.includes("youtube") || cleanCmd.includes("yt")) {
+                        lastExecutionTime = now;
                         executeAction("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
                     } else if (cleanCmd.includes("facebook") || cleanCmd.includes("fb")) {
+                        lastExecutionTime = now;
                         executeAction("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
                     } else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) {
+                        lastExecutionTime = now;
                         executeAction("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
                     } else if (cleanCmd.includes("mail") || cleanCmd.includes("gmail")) {
+                        lastExecutionTime = now;
                         executeAction("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end");
                     }
                     
                     // 📶 २. मोबाईल हार्डवेअर सिस्टीम थेट सेटिंग्ज
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
+                        lastExecutionTime = now;
                         executeAction("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
+                        lastExecutionTime = now;
                         executeAction("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
                     } else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) {
+                        lastExecutionTime = now;
                         executeAction("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
                     } else if (cleanCmd.includes("hotspot")) {
+                        lastExecutionTime = now;
                         executeAction("intent:#Intent;action=android.settings.TETHER_SETTINGS;end");
                     } else if (cleanCmd.includes("bluetooth")) {
+                        lastExecutionTime = now;
                         executeAction("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
                     }
                 }
             };
 
+            // माईक बॅकएंडला विना-स्टॉप चोवीस तास जिवंत राहील
             recognition.onend = function() {
-                setTimeout(() => {
-                    try { recognition.start(); } catch(err) {}
-                }, 500);
+                try { recognition.start(); } catch(err) {}
             };
 
             recognition.start();
