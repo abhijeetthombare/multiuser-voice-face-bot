@@ -1,3 +1,6 @@
 streamlit
+opencv-python-headless
+mediapipe
+deepface
+SpeechRecognition
 streamlit-mic-recorder
-requests
