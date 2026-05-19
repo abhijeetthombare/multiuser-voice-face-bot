@@ -83,7 +83,7 @@ if not st.session_state['authenticated']:
                         
                         if match_found:
                             st.session_state['authenticated'] = True
-                            st.session_state['current_user'] = max(st.session_state['user_db'].keys(), key=lambda k: name == identified_user)
+                            st.session_state['current_user'] = identified_user
                             st.rerun()
                         else:
                             st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})")
@@ -93,11 +93,11 @@ if not st.session_state['authenticated']:
 # 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% STABLE FRONTEND VOICE)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
-    st.markdown("🌐 **Status:** `माईक ऑन आहे. थेट बोला (उदा: 'Python open youtube')`")
+    st.markdown("🌐 **Status:** `माईक ऑन आहे. थेट बोला (उदा: 'Python open whatsapp')`")
     
     st.info("🎙️ Live Speech UI linked directly to Browser Speech Engine.")
 
-    # --- 🎙️ JAVASCRIPT ULTRA STABLE VOICE INTERFACE (NATIVE APP LAUNCHER) ---
+    # --- 🎙️ JAVASCRIPT ULTRA STABLE VOICE INTERFACE (BYPASSING CHROME BLOCKER) ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
         <p style="margin:0; font-weight:bold; color:#1f77b4;">🗣️ Live Speech (तुमचा आवाज): <span id="speech-live" style="color:#333; font-weight:normal;">Waiting for voice...</span></p>
@@ -113,24 +113,27 @@ else:
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
-            // 🚀 मूळ अँड्रॉइड ॲप्स बळजबरीने उघडण्यासाठी सिस्टीम पॅकेज इंटरफेस फंक्शन
-            function forceOpenNativeApp(intentUrl, fallbackWebUrl) {
-                const startTime = Date.now();
+            // 🚀 Chrome Security block bypass karnara solid function
+            function forceExecuteIntent(appIntent, webFallback) {
+                // Mic la 1.5 sekandasathi shaant karne jyamule browser la reload/loop cha shock basnaar nahi
+                recognition.stop();
                 
-                // गुपचूप मूळ सिस्टीम इंटेंट ट्रिगर करणे
-                window.location.href = intentUrl;
-                
-                // जर ०.५ सेकंदात मोबाईल ॲप उघडले नाही, तरच वेबसाईट बॅकअप उघडेल
+                try {
+                    // Method 1: Direct location replacement (Best for Android Apps)
+                    window.location.replace(appIntent);
+                } catch(e) {
+                    // Method 2: Flash Anchor Tag click simulation
+                    const link = document.createElement('a');
+                    link.href = appIntent;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+
+                // 🔄 1.5 सेकंदानंतर माईक पूर्णपणे रिसेट होऊन पुन्हा ऐकायला सुरुवात करेल
                 setTimeout(() => {
-                    if (Date.now() - startTime < 600) {
-                        const a = document.createElement('a');
-                        a.href = fallbackWebUrl;
-                        a.target = '_blank';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                    }
-                }, 500);
+                    try { recognition.start(); } catch(err) {}
+                }, 1500);
             }
 
             recognition.onresult = function(event) {
@@ -156,41 +159,43 @@ else:
                     if (cleanCmd.includes("open") || cleanCmd.includes("start")) {
                         let app = cleanCmd.replace("open", "").replace("start", "").trim();
                         
-                        // 🔥 अँड्रॉइड मूळ पॅकेज इंटेंट्स (आता थेट मोबाईल ॲप्स उघडणार!)
-                        if (app.includes("instagram") || app.includes("insta")) {
-                            forceOpenNativeApp("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end", "https://instagram.com");
+                        // 🔥 NATIVE HARD FORCED INTENTS
+                        if (app.includes("whatsapp")) {
+                            forceExecuteIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end", "https://api.whatsapp.com/send");
+                        } else if (app.includes("instagram") || app.includes("insta")) {
+                            forceExecuteIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end", "https://instagram.com");
                         } else if (app.includes("youtube") || app.includes("yt")) {
-                            forceOpenNativeApp("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end", "https://youtube.com");
-                        } else if (app.includes("whatsapp")) {
-                            forceOpenNativeApp("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end", "https://api.whatsapp.com/send");
+                            forceExecuteIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end", "https://youtube.com");
                         } else if (app.includes("facebook") || app.includes("fb")) {
-                            forceOpenNativeApp("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end", "https://facebook.com");
+                            forceExecuteIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end", "https://facebook.com");
                         } else if (app.includes("map") || app.includes("maps")) {
-                            forceOpenNativeApp("intent://maps.google.com/#Intent;package=com.google.android.apps.maps;scheme=https;end", "https://maps.google.com");
+                            forceExecuteIntent("intent://maps.google.com/#Intent;package=com.google.android.apps.maps;scheme=https;end", "https://maps.google.com");
                         } else if (app.includes("mail") || app.includes("gmail")) {
-                            forceOpenNativeApp("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end", "https://mail.google.com");
+                            forceExecuteIntent("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end", "https://mail.google.com");
                         } else {
-                            forceOpenNativeApp("intent://www.google.com/search?q=" + encodeURIComponent(app) + "#Intent;scheme=https;end", "https://www.google.com/search?q=" + app);
+                            forceExecuteIntent("https://www.google.com/search?q=" + encodeURIComponent(app), "https://www.google.com/search?q=" + app);
                         }
                     }
-                    // 📶 सिस्टीम हार्डवेअर सेटिंग्ज (Wi-Fi, Mobile Data, GPS)
+                    // 📶 SYSTEM HARDWARE SETTINGS
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
-                        window.location.href = "intent:#Intent;action=android.settings.WIFI_SETTINGS;end";
+                        forceExecuteIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end", "");
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
-                        window.location.href = "intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end";
+                        forceExecuteIntent("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end", "");
                     } else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) {
-                        window.location.href = "intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end";
+                        forceExecuteIntent("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end", "");
                     } else if (cleanCmd.includes("hotspot")) {
-                        window.location.href = "intent:#Intent;action=android.settings.TETHER_SETTINGS;end";
+                        forceExecuteIntent("intent:#Intent;action=android.settings.TETHER_SETTINGS;end", "");
                     } else if (cleanCmd.includes("bluetooth")) {
-                        window.location.href = "intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end";
+                        forceExecuteIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end", "");
                     }
                 }
             };
 
-            // 🔄 माईक कंटीन्युअस लूप फिक्स - कमांड झाल्यावरही माईक न थांबता सतत चालू राहील!
             recognition.onend = function() {
-                setTimeout(() => { recognition.start(); }, 400);
+                // Safe restart loop jyamule crash honar nahi
+                setTimeout(() => {
+                    try { recognition.start(); } catch(err) {}
+                }, 500);
             };
 
             recognition.start();
