@@ -29,7 +29,7 @@ if 'last_command' not in st.session_state:
 if 'redirect_url' not in st.session_state:
     st.session_state['redirect_url'] = None
 
-# --- ३. JAVASCRIPT AUTOMATION ENGINE (REDIRECTION & CONTINUOUS VOICE) ---
+# --- ३. JAVASCRIPT DIRECT REDIRECTION ENGINE ---
 if st.session_state['redirect_url']:
     js_redirect = f"""
     <script>
@@ -49,9 +49,9 @@ with col2:
 
 st.write("---")
 
-# --- ५. REGISTRATION & LOGIN TABS ---
+# --- ५. REGISTRATION & AUTOMATIC LOGIN TABS ---
 if not st.session_state['authenticated']:
-    tab1, tab2 = st.tabs(["📝 New User Registration", "🔑 Biometric Login"])
+    tab1, tab2 = st.tabs(["📝 New User Registration", "🔑 Automatic Biometric Login"])
     
     with tab1:
         st.subheader("नवीन युझर खाते तयार करा")
@@ -62,40 +62,51 @@ if not st.session_state['authenticated']:
             if reg_name and reg_cam:
                 reg_image = Image.open(reg_cam).convert('RGB')
                 st.session_state['user_db'][reg_name] = reg_image
-                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी यशस्वी झाली आहे! अबी भाऊ, आता लॉगिन टॅबमध्ये जा.")
+                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी यशस्वी झाली आहे! आता लॉगिन टॅबमध्ये जा.")
             else:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
     with tab2:
-        st.subheader("चेहरा दाखवून सिस्टीम अनलॉक करा")
+        st.subheader("फक्त कॅमेरा समोर या - सिस्टीम स्वतः ओळखेल")
         
         if len(st.session_state['user_db']) == 0:
             st.warning("⚠️ आधी रजिस्ट्रेशन टॅबमध्ये जाऊन किमान एका युझरची नोंदणी करा.")
         else:
-            login_name = st.selectbox("तुमचे नाव निवडा (Select Your Name)", list(st.session_state['user_db'].keys()))
-            login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फोटो काढा (कॅмера समोर या)", key="login_camera")
+            login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फोटो काढा", key="login_camera")
             
+            # 🚀 ऑटोमॅटिक फेस रेकग्निशन (नाव निवडायची गरज नाही!)
             if login_cam:
-                with st.spinner("🔄 Biometric Analysis in progress..."):
+                with st.spinner("🔄 Scanning Face Database..."):
                     try:
-                        base_img = st.session_state['user_db'][login_name]
                         login_img = Image.open(login_cam).convert('RGB')
-                        
-                        base_resized = base_img.resize((300, 300))
                         login_resized = login_img.resize((300, 300))
                         
-                        diff = ImageChops.difference(base_resized, login_resized)
-                        stat = ImageStat.Stat(diff)
-                        diff_ratio = sum(stat.mean) / (3 * 255)
+                        match_found = False
+                        identified_user = None
+                        best_score = 1.0
                         
-                        if diff_ratio < 0.35:
+                        # डेटाबेसमधील प्रत्येक रजिस्टर चेहऱ्यासोबत मॅचिंग चेक करणे
+                        for name, base_img in st.session_state['user_db'].items():
+                            base_resized = base_img.resize((300, 300))
+                            
+                            diff = ImageChops.difference(base_resized, login_resized)
+                            stat = ImageStat.Stat(diff)
+                            diff_ratio = sum(stat.mean) / (3 * 255)
+                            
+                            if diff_ratio < diff_ratio < best_score:
+                                best_score = diff_ratio
+                                if diff_ratio < 0.35: # थ्रेशोल्ड मॅच
+                                    match_found = True
+                                    identified_user = name
+                        
+                        if match_found:
                             st.session_state['authenticated'] = True
-                            st.session_state['current_user'] = login_name
-                            st.success(f"🔓 स्वागत आहे {login_name}! सिस्टीम अनलॉक झाली.")
+                            st.session_state['current_user'] = identified_user
+                            st.success(f"🔓 स्वागत आहे {identified_user}! चेहरा ओळखला गेला आहे.")
                             time.sleep(0.5)
                             st.rerun()
                         else:
-                            st.error(f"❌ चेहरा मॅच झाला नाही! (Distance Score: {round(diff_ratio, 2)})")
+                            st.error("❌ चेहरा ओळखता आला नाही! कृपया पुन्हा प्रयत्न करा.")
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
@@ -103,33 +114,37 @@ if not st.session_state['authenticated']:
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
-    # गुपचूप बॅकएंडला व्हॉईस डेटा प्रोसेस करण्यासाठी लपवलेला इनपुट बॉक्स
+    # लपवलेला रिकामा बॉक्स पूर्णपणे अदृश्य करण्यासाठी CSS
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stTextInput"] {
+            display: none !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
     if 'hidden_voice_query' not in st.session_state:
         st.session_state['hidden_voice_query'] = ""
 
     # --- 🎙️ PURE JAVASCRIPT BACKGROUND LIVE STT ENGINE ---
-    # हा कोड ब्राउझरचा माईक ऑन ठेवतो, बटणाची गरजच नाही!
     js_speech_engine = """
     <script>
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            console.log("Web Speech API not supported in this browser.");
+            console.log("Web Speech API not supported.");
         } else {
             const recognition = new SpeechRecognition();
             recognition.continuous = true;
             recognition.interimResults = false;
             recognition.lang = 'en-US';
 
-            recognition.onstart = function() {
-                console.log("Voice recognition activated. Listening continuously...");
-            };
-
             recognition.onresult = function(event) {
                 const current = event.resultIndex;
                 const transcript = event.results[current][0].transcript;
-                console.log("Heard: " + transcript);
                 
-                # स्ट्रीमलिटच्या गुपचूप बॉक्समध्ये डेटा ढकलणे
                 window.parent.postMessage({
                     type: 'streamlit:set_widget_value',
                     from: 'js_voice_bridge',
@@ -137,11 +152,6 @@ else:
                 }, '*');
             };
 
-            recognition.onerror = function(event) {
-                console.log("Error occurred in recognition: " + event.error);
-            };
-
-            // माईक बंद पडला तर ऑटोमॅटिक पुन्हा सुरू करणे (Continuous Loop)
             recognition.onend = function() {
                 recognition.start();
             };
@@ -150,27 +160,27 @@ else:
         }
     </script>
     """
-    # JavaScript बॅकएंडला रन करणे
     components.html(js_speech_engine, height=0, width=0)
     
-    # हा तो लपवलेला ब्रिज आहे जो JavaScript चा आवाज पायथॉनमध्ये आणतो
-    heard_text = st.text_input("🎙️ System Status: Continuous Listening...", key="js_voice_bridge", label_visibility="collapsed")
+    # व्हॉईस डेटा ब्रिज
+    heard_text = st.text_input("", key="js_voice_bridge", label_visibility="collapsed")
     
+    # व्हॉईस लॉजिक ओव्हरलॅपिंग आणि लूप फिक्स
     if heard_text and heard_text != st.session_state['hidden_voice_query']:
         st.session_state['hidden_voice_query'] = heard_text
         query = heard_text.lower().strip()
-        st.session_state['last_command'] = query
-        st.rerun()
+        
+        if "python" in query or "paithen" in query or "py" in query:
+            st.session_state['last_command'] = query
 
     st.info(f"💾 **Last Detected Live Voice Command:** {st.session_state['last_command']}")
-    st.markdown("🌐 **Status:** `माईक ऑटोमॅटिक सुरू आहे. थेट बोला (उदा: 'Python open youtube')`")
+    st.markdown("🌐 **Status:** `माईक ऑन आहे. थेट बोला (उदा: 'Python open youtube')`")
 
-    # --- ⚡ COMMAND EXECUTION ENGINE ---
+    # --- ⚡ COMMAND EXECUTION ENGINE (FIXED NO-LOOP) ---
     cmd = st.session_state['last_command']
-    if "python" in cmd or "paithen" in cmd or "py" in cmd:
+    if cmd != "None":
         clean_command = cmd.replace("python", "").replace("paithen", "").replace("py", "").strip()
-        st.success(f"⚙️ Running Automatic Action: `{clean_command}`")
-        st.session_state['last_command'] = "None" # लूप टाळण्यासाठी रीसेट
+        st.session_state['last_command'] = "None" # एक्झिक्युशन आधीच क्लियर करून लूप तोडणे
         
         # --- १. मोबाईल सिस्टीम सेटिंग्ज ---
         if any(x in clean_command for x in ['wifi', 'wi-fi', 'data', 'internet', 'location', 'gps', 'hotspot', 'tethering', 'bluetooth']):
@@ -210,4 +220,5 @@ else:
         st.session_state['authenticated'] = False
         st.session_state['current_user'] = None
         st.session_state['last_command'] = "None"
+        st.session_state['hidden_voice_query'] = ""
         st.rerun()
