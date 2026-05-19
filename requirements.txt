@@ -1,7 +1,5 @@
 streamlit
 opencv-python-headless
 deepface
-speechrecognition
-tf-keras
+SpeechRecognition
 streamlit-mic-recorder
-numpy
