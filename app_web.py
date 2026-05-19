@@ -1,9 +1,3 @@
-# --- SYSTEM OVERRIDE FOR LINUX DRIVERS ---
-import sys
-from unittest.mock import MagicMock
-sys.modules['cv2'] = MagicMock()
-# -----------------------------------------
-
 import streamlit as st
 import numpy as np
 from deepface import DeepFace
@@ -12,6 +6,7 @@ import os
 import time
 import webbrowser
 import requests
+from PIL import Image
 
 # --- १. PAGE SET-UP & THEME ---
 st.set_page_config(
@@ -55,12 +50,10 @@ if not st.session_state['authenticated']:
         
         if st.button("Register Face Now", use_container_width=True):
             if reg_name and reg_cam:
-                file_path = f"{reg_name}_base.jpg"
-                with open(file_path, "wb") as f:
-                    f.write(reg_cam.getbuffer())
-                
-                st.session_state['user_db'][reg_name] = file_path
-                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी यशस्वी झाली आहे! अबी भाऊ, आता लॉगिन टॅबमध्ये जा.")
+                # PIL Image ऑब्जेक्ट बनवून सेशन स्टेटमध्ये थेट सेव्ह करणे (इमेज लॉस होणार नाही)
+                reg_image = Image.open(reg_cam)
+                st.session_state['user_db'][reg_name] = reg_image
+                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी यशस्वी झाली आहे! आता लॉगिन टॅबमध्ये जा.")
             else:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
@@ -75,15 +68,20 @@ if not st.session_state['authenticated']:
             login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फ्रेश फोटो काढा", key="login_camera")
             
             if login_cam and login_name:
-                with open("temp_login.jpg", "wb") as f:
-                    f.write(login_cam.getbuffer())
-                
                 st.info("🔄 Biometric Facenet Analysis in progress...")
                 
                 try:
-                    base_img = st.session_state['user_db'][login_name]
-                    result = DeepFace.verify(img1_path = base_img, 
-                                             img2_path = "temp_login.jpg",
+                    # १. बेस फोटो आणि फ्रेश फोटो PIL फॉरमॅटमध्ये मिळवणे
+                    base_pil = st.session_state['user_db'][login_name]
+                    login_pil = Image.open(login_cam)
+                    
+                    # २. त्यांना numpy array मध्ये कन्वर्शन करणे (OpenCV ची गरजच नाही)
+                    img1 = np.array(base_pil)
+                    img2 = np.array(login_pil)
+                    
+                    # ३. डीपफेस व्हेरिफिकेशन (थेट नंपाय अरे पास करणे)
+                    result = DeepFace.verify(img1_path = img1, 
+                                             img2_path = img2,
                                              model_name = "Facenet",
                                              distance_metric = "cosine", 
                                              enforce_detection = False)
@@ -106,9 +104,8 @@ else:
     st.info(f"💾 **Last Detected Command:** {st.session_state['last_command']}")
     
     st.markdown("### 🎙️ Web Voice Automation Command Center")
-    st.write("मोबाईलवर वापरताना माईल परमिशन **Allow** करा, बोला आणि स्टॉप करा.")
+    st.write("मोबाईलवर वापरताना माईल परमिशन Allow करा, बोला आणि स्टॉप करा.")
     
-    # 🛠️ मोबाईल माईक फिक्स: आपण फिक्स पॅरामीटर्ससह स्पीच रेकॉर्डर लोड केला आहे
     from streamlit_mic_recorder import speech_to_text
     
     text_received = speech_to_text(
@@ -129,9 +126,8 @@ else:
             
             st.success(f"⚙️ Action Triggered: `{clean_command}`")
             
-            # --- 📚 १. विकिपीडिया सर्च मॅजिक्स (Special Feature) ---
+            # --- विकिपीडिया सर्च ---
             if 'wikipedia' in clean_command or 'wiki' in clean_command or 'tell me about' in clean_command:
-                # सर्च क्युरी स्वच्छ करणे
                 search_term = clean_command.replace("wikipedia", "").replace("wiki", "").replace("tell me about", "").strip()
                 st.info(f"🔍 Searching Wikipedia for: `{search_term}`...")
                 
@@ -143,57 +139,32 @@ else:
                         st.markdown(f"### 📖 Wikipedia Summary for **{search_term.title()}**:")
                         st.info(response['extract'])
                     else:
-                        st.warning("❌ विकिपीडियावर या विषयाची सोपी माहिती सापडली नाही. गुगल सर्च उघडत आहे...")
+                        st.warning("❌ विकिपीडियावर माहिती सापडली नाही. गुगल सर्च उघडत आहे...")
                         webbrowser.open(f"https://www.google.com/search?q={search_term}")
                 except Exception as wiki_err:
                     st.error(f"विकिपीडिया एरर: {wiki_err}")
             
-            # --- 🚀 २. युनिव्हर्सल अ‍ॅप्स ओपनिंग मॅजिक्स ---
+            # --- युनिव्हर्सल अ‍ॅप्स ओपनिंग मॅजिक्स ---
             elif 'open' in clean_command or 'start' in clean_command:
                 app = clean_command.replace("open ", "").replace("start ", "").strip()
                 
                 if 'instagram' in app or 'insta' in app:
                     webbrowser.open("https://www.instagram.com")
                     st.info("Opening Instagram...")
-                elif 'facebook' in app or 'fb' in app:
-                    webbrowser.open("https://www.facebook.com")
-                    st.info("Opening Facebook...")
-                elif 'whatsapp' in app:
-                    webbrowser.open("https://web.whatsapp.com")
-                    st.info("Opening WhatsApp...")
-                elif 'telegram' in app or 'tg' in app:
-                    webbrowser.open("https://t.me")
-                    st.info("Opening Telegram...")
-                elif 'linkedin' in app:
-                    webbrowser.open("https://www.linkedin.com")
-                    st.info("Opening LinkedIn...")
                 elif 'youtube' in app or 'yt' in app:
                     webbrowser.open("https://www.youtube.com")
                     st.info("Opening YouTube...")
                 elif 'google' in app:
                     webbrowser.open("https://www.google.com")
                     st.info("Opening Google...")
-                elif 'gmail' in app or 'mail' in app:
-                    webbrowser.open("https://mail.google.com")
-                    st.info("Opening Gmail...")
-                elif 'map' in app or 'maps' in app:
-                    webbrowser.open("https://maps.google.com")
-                    st.info("Opening Google Maps...")
-                elif 'github' in app:
-                    webbrowser.open("https://github.com")
-                    st.info("Opening GitHub...")
-                elif 'chatgpt' in app or 'gpt' in app:
-                    webbrowser.open("https://chat.openai.com")
-                    st.info("Opening ChatGPT...")
                 else:
                     webbrowser.open(f"https://www.google.com/search?q={app}")
                     st.success(f"Searching for '{app}' on Google...")
             else:
-                # जर ओपन किंवा विकी नसेल, तर डायरेक्ट गुगल सर्च मारेल
                 webbrowser.open(f"https://www.google.com/search?q={clean_command}")
                 st.success(f"Searching for '{clean_command}' on Google...")
         else:
-            st.warning("⚠️ कमांडमध्ये 'Python' कीवर्ड सापडला नाही. (उदा. बोला: 'Python open youtube')")
+            st.warning("⚠️ कमांडमध्ये 'Python' कीवर्ड सापडला नाही.")
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
