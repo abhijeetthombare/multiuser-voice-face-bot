@@ -74,7 +74,6 @@ if not st.session_state['authenticated']:
         else:
             login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फोटो काढा", key="login_camera")
             
-            # 🚀 ऑटोमॅटिक फेस रेकग्निशन (नाव निवडायची गरज नाही!)
             if login_cam:
                 with st.spinner("🔄 Scanning Face Database..."):
                     try:
@@ -85,7 +84,7 @@ if not st.session_state['authenticated']:
                         identified_user = None
                         best_score = 1.0
                         
-                        # डेटाबेसमधील प्रत्येक रजिस्टर चेहऱ्यासोबत मॅचिंग चेक करणे
+                        # Fix kelela accurate face recognition loop
                         for name, base_img in st.session_state['user_db'].items():
                             base_resized = base_img.resize((300, 300))
                             
@@ -93,9 +92,10 @@ if not st.session_state['authenticated']:
                             stat = ImageStat.Stat(diff)
                             diff_ratio = sum(stat.mean) / (3 * 255)
                             
-                            if diff_ratio < diff_ratio < best_score:
+                            # Threshhold thoda relax kela ahe (0.45) jyamule mobile cam var ekdam perfect match hoil
+                            if diff_ratio < best_score:
                                 best_score = diff_ratio
-                                if diff_ratio < 0.35: # थ्रेशोल्ड मॅच
+                                if diff_ratio < 0.45: 
                                     match_found = True
                                     identified_user = name
                         
@@ -106,7 +106,7 @@ if not st.session_state['authenticated']:
                             time.sleep(0.5)
                             st.rerun()
                         else:
-                            st.error("❌ चेहरा ओळखता आला नाही! कृपया पुन्हा प्रयत्न करा.")
+                            st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)} - Requirements: < 0.45)")
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
@@ -114,7 +114,7 @@ if not st.session_state['authenticated']:
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
-    # लपवलेला रिकामा बॉक्स पूर्णपणे अदृश्य करण्यासाठी CSS
+    # Hide the text input box using custom CSS
     st.markdown(
         """
         <style>
@@ -162,10 +162,8 @@ else:
     """
     components.html(js_speech_engine, height=0, width=0)
     
-    # व्हॉईस डेटा ब्रिज
     heard_text = st.text_input("", key="js_voice_bridge", label_visibility="collapsed")
     
-    # व्हॉईस लॉजिक ओव्हरलॅपिंग आणि लूप फिक्स
     if heard_text and heard_text != st.session_state['hidden_voice_query']:
         st.session_state['hidden_voice_query'] = heard_text
         query = heard_text.lower().strip()
@@ -176,11 +174,11 @@ else:
     st.info(f"💾 **Last Detected Live Voice Command:** {st.session_state['last_command']}")
     st.markdown("🌐 **Status:** `माईक ऑन आहे. थेट बोला (उदा: 'Python open youtube')`")
 
-    # --- ⚡ COMMAND EXECUTION ENGINE (FIXED NO-LOOP) ---
+    # --- ⚡ COMMAND EXECUTION ENGINE ---
     cmd = st.session_state['last_command']
     if cmd != "None":
         clean_command = cmd.replace("python", "").replace("paithen", "").replace("py", "").strip()
-        st.session_state['last_command'] = "None" # एक्झिक्युशन आधीच क्लियर करून लूप तोडणे
+        st.session_state['last_command'] = "None" 
         
         # --- १. मोबाईल सिस्टीम सेटिंग्ज ---
         if any(x in clean_command for x in ['wifi', 'wi-fi', 'data', 'internet', 'location', 'gps', 'hotspot', 'tethering', 'bluetooth']):
