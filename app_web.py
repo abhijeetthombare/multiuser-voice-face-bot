@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Siri-Tab Mode Fixed)")
+st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Siri-Instant Auto-Refresh)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -90,20 +90,21 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (SIRI FAST + NEW TAB FIX)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (SIRI FAST + FORCED AUTO REFRESH)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     # इनपुट बॉक्स लपवण्यासाठी CSS
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT NATIVE COUPLING (NO-REFRESH PURE CONTINUOUS LOOP) ---
+    # --- 🎙️ JAVASCRIPT NATIVE COUPLING (FORCED RELOAD BYPASS ENGINE) ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
-        <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Continuous Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening for commands continuously...</span></p>
+        <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Active Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening for commands...</span></p>
     </div>
     
-    <button id="clear-buffer-btn" style="width:100%; padding:10px; background-color:#e67e22; color:white; font-weight:bold; border:none; border-radius:5px; cursor:pointer; margin-bottom:15px;">🔄 Flush Voice Buffer (Instant Reset)</button>
+    <button id="stop-mic-btn" style="width:100%; padding:12px; background-color:#d32f2f; color:white; font-size:16px; font-weight:bold; border:none; border-radius:5px; cursor:pointer; margin-bottom:15px;">🛑 Stop Microphone (5s Force Auto-Refresh)</button>
+    <a id="force-trigger" href="#" target="_blank" style="display:none;"></a>
 
     <script>
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -111,40 +112,52 @@ else:
             document.getElementById("speech-live").innerText = "Web Speech API not supported.";
         } else {
             let recognition = new SpeechRecognition();
-            recognition.continuous = true; // 🚀 याला TRUE केलंय, जेणेकरून रिफ्रेशची गरजच नाही!
-            recognition.interimResults = true;
+            recognition.continuous = false; 
+            recognition.interimResults = false;
             recognition.lang = 'en-US';
 
-            // फ्लश बटण दाबल्यावर ब्राउझर रिफ्रेश न करता जागच्या जागी मेमरी क्लीन करणे
-            document.getElementById("clear-buffer-btn").addEventListener("click", function() {
-                document.getElementById("speech-live").innerText = "Buffer Flushed! Listening fresh...";
-                recognition.stop();
+            let isPaused = false;
+
+            // ⚡ ५ सेकंदाचा कडक फोर्स रिलोड क्लिक इव्हेंट
+            document.getElementById("stop-mic-btn").addEventListener("click", function() {
+                isPaused = true;
+                recognition.stop(); // माईक जागेवर ब्लॉक करा
+                
+                let secondsLeft = 5;
+                const uiText = document.getElementById("speech-live");
+                const btn = document.getElementById("stop-mic-btn");
+                
+                btn.disabled = true;
+                btn.style.backgroundColor = "#757575";
+                
+                const interval = setInterval(() => {
+                    uiText.innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⏸️ Mic Stopped... Auto-Refreshing in " + secondsLeft + "s</span>";
+                    secondsLeft--;
+                    
+                    if (secondsLeft < 0) {
+                        clearInterval(interval);
+                        // 🔥 हा तो कडक बायपास कोड आहे जो पूर्ण पेजला बळजबरीने ऑटो-रिफ्रेश करेलच!
+                        window.parent.location.href = window.parent.location.href;
+                    }
+                }, 1000);
             });
 
             function executeInstantAction(intentUrl) {
-                // नवीन टॅबमध्ये ॲप फोर्स ओपन करणे
+                if (isPaused) return;
                 window.open(intentUrl, '_blank');
             }
 
             recognition.onresult = function(event) {
-                let interimTranscript = '';
-                let finalTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-
-                const query = (finalTranscript || interimTranscript).toLowerCase().trim();
+                if (isPaused) return;
+                
+                const resultIndex = event.resultIndex;
+                const query = event.results[resultIndex][0].transcript.toLowerCase().trim();
                 document.getElementById("speech-live").innerText = query;
                 
                 if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
                     let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
                     
-                    // 📱 १. मूळ अँड्रॉइड ॲप्स (Siri speed)
+                    // 📱 १. मूळ अँड्रॉइड ॲप्स
                     if (cleanCmd.includes("whatsapp")) {
                         executeInstantAction("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
                     } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
@@ -174,11 +187,12 @@ else:
                 }
             };
 
-            // माईक कशानेही न थांबता बॅकएंडला सतत १ मिलिसेकंदात रीस्टार्ट होत राहील!
             recognition.onend = function() {
-                setTimeout(() => {
-                    try { recognition.start(); } catch(err) {}
-                }, 1);
+                if (!isPaused) {
+                    setTimeout(() => {
+                        try { recognition.start(); } catch(err) {}
+                    }, 1);
+                }
             };
 
             recognition.start();
