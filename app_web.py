@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Siri-Instant Mode)")
+st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Siri-Tab Mode)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -90,17 +90,17 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (SIRI FAST RESPONSE)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (SIRI FAST + NEW TAB FIX)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     # इनपुट बॉक्स लपवण्यासाठी CSS
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT NATIVE COUPLING (SIRI INSTANT LOOP) ---
+    # --- 🎙️ JAVASCRIPT NATIVE COUPLING (SIRI NEW TAB LAUNCHER) ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
-        <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Active Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening for commands...</span></p>
+        <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Active Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening for commands continuously...</span></p>
     </div>
     
     <button id="stop-mic-btn" style="width:100%; padding:10px; background-color:#d32f2f; color:white; font-weight:bold; border:none; border-radius:5px; cursor:pointer; margin-bottom:15px;">🛑 Stop Microphone (5s Pause)</button>
@@ -111,10 +111,9 @@ else:
         if (!SpeechRecognition) {
             document.getElementById("speech-live").innerText = "Web Speech API not supported.";
         } else {
-            // सिरीसारखं सतत ऐकण्यासाठी ऑब्जेक्ट्स री-डिफाइन केले
             let recognition = new SpeechRecognition();
-            recognition.continuous = false; // Siri pattern: एका कमांडनंतर बफर फ्रेश करण्यासाठी false केला
-            recognition.interimResults = false; // थेट फायनल रिझल्टवर काम करणार (Fast & Safe)
+            recognition.continuous = false; // Siri pattern: मेमरी फ्लश करण्यासाठी
+            recognition.interimResults = false;
             recognition.lang = 'en-US';
 
             let isPaused = false;
@@ -135,17 +134,16 @@ else:
                 }, 1000);
             });
 
+            // 🚀 नवीन स्वतंत्र टॅबमध्ये ॲप उघडणारे मास्टर फंक्शन
             function executeInstantAction(intentUrl) {
                 if (isPaused) return;
-                const triggerBtn = document.getElementById("force-trigger");
-                triggerBtn.href = intentUrl;
-                triggerBtn.click(); // इमिजिएट ऑटो-क्लिक (No delay)
+                // window.open डायरेक्ट नवीन टॅब उघडेल, ज्यामुळे मूळ स्क्रीन बॅकग्राउंडला फ्रीझ होणार नाही!
+                window.open(intentUrl, '_blank');
             }
 
             recognition.onresult = function(event) {
                 if (isPaused) return;
                 
-                // थेट अंतिम ऐकलेला शब्द पकडणे
                 const resultIndex = event.resultIndex;
                 const query = event.results[resultIndex][0].transcript.toLowerCase().trim();
                 document.getElementById("speech-live").innerText = query;
@@ -153,7 +151,7 @@ else:
                 if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
                     let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
                     
-                    // 📱 १. मूळ अँड्रॉइड ॲप्स (Siri speed)
+                    // 📱 १. मूळ अँड्रॉइड ॲप्स (Force Open in New Tab)
                     if (cleanCmd.includes("whatsapp")) {
                         executeInstantAction("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
                     } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
@@ -168,7 +166,7 @@ else:
                         executeInstantAction("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end");
                     }
                     
-                    // 📶 २. सिस्टीम हार्डवेअर
+                    // 📶 २. सिस्टीम हार्डवेअर सेटिंग्ज
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
                         executeInstantAction("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
@@ -183,12 +181,11 @@ else:
                 }
             };
 
-            // 🔄 सिरीसारखं एकापाठोपाठ एक ऐकण्यासाठी इंजिन संपताच १ मिलिसेकंदात पूर्ण मेमरी फ्रेश करून रीस्टार्ट!
             recognition.onend = function() {
                 if (!isPaused) {
                     setTimeout(() => {
                         try { recognition.start(); } catch(err) {}
-                    }, 1);
+                    }, 1); // 1ms बफर रीस्टार्ट
                 }
             };
 
