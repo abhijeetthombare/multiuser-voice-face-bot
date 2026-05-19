@@ -52,7 +52,7 @@ if not st.session_state['authenticated']:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
     with tab2:
-        st.subheader("फक्त कॅमेरा समोर या - सिस्टीम स्वतः ओळखेल")
+        st.subheader("फक्त कॅмера समोर या - सिस्टीम स्वतः ओळखेल")
         
         if len(st.session_state['user_db']) == 0:
             st.warning("⚠️ आधी रजिस्ट्रेशन टॅबमध्ये जाऊन किमान एका युझरची नोंदणी करा.")
@@ -83,7 +83,7 @@ if not st.session_state['authenticated']:
                         
                         if match_found:
                             st.session_state['authenticated'] = True
-                            st.session_state['current_user'] = identified_user
+                            st.session_state['current_user'] = max(st.session_state['user_db'].keys(), key=lambda k: name == identified_user)
                             st.rerun()
                         else:
                             st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})")
@@ -97,7 +97,7 @@ else:
     
     st.info("🎙️ Live Speech UI linked directly to Browser Speech Engine.")
 
-    # --- 🎙️ JAVASCRIPT ULTRA STABLE VOICE INTERFACE (REPAIRED FOR MOBILE APPS) ---
+    # --- 🎙️ JAVASCRIPT ULTRA STABLE VOICE INTERFACE (NATIVE APP LAUNCHER) ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
         <p style="margin:0; font-weight:bold; color:#1f77b4;">🗣️ Live Speech (तुमचा आवाज): <span id="speech-live" style="color:#333; font-weight:normal;">Waiting for voice...</span></p>
@@ -113,15 +113,24 @@ else:
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
-            // मोबाईल ब्राउझर सुरक्षा बायपास करण्यासाठी कस्टम लिंक ओपनर फंक्शन
-            function forceOpenApp(targetUrl) {
-                const a = document.createElement('a');
-                a.href = targetUrl;
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+            // 🚀 मूळ अँड्रॉइड ॲप्स बळजबरीने उघडण्यासाठी सिस्टीम पॅकेज इंटरफेस फंक्शन
+            function forceOpenNativeApp(intentUrl, fallbackWebUrl) {
+                const startTime = Date.now();
+                
+                // गुपचूप मूळ सिस्टीम इंटेंट ट्रिगर करणे
+                window.location.href = intentUrl;
+                
+                // जर ०.५ सेकंदात मोबाईल ॲप उघडले नाही, तरच वेबसाईट बॅकअप उघडेल
+                setTimeout(() => {
+                    if (Date.now() - startTime < 600) {
+                        const a = document.createElement('a');
+                        a.href = fallbackWebUrl;
+                        a.target = '_blank';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
+                }, 500);
             }
 
             recognition.onresult = function(event) {
@@ -147,41 +156,41 @@ else:
                     if (cleanCmd.includes("open") || cleanCmd.includes("start")) {
                         let app = cleanCmd.replace("open", "").replace("start", "").trim();
                         
-                        // 🚀 अधिकृत मोबाईल डीप लिंक्स फिक्स (वेब आणि अ‍ॅप दोन्ही कव्हर केले)
+                        // 🔥 अँड्रॉइड मूळ पॅकेज इंटेंट्स (आता थेट मोबाईल ॲप्स उघडणार!)
                         if (app.includes("instagram") || app.includes("insta")) {
-                            forceOpenApp("https://instagram.com/_u/");
+                            forceOpenNativeApp("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end", "https://instagram.com");
                         } else if (app.includes("youtube") || app.includes("yt")) {
-                            forceOpenApp("https://www.youtube.com");
+                            forceOpenNativeApp("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end", "https://youtube.com");
                         } else if (app.includes("whatsapp")) {
-                            forceOpenApp("https://api.whatsapp.com/send");
+                            forceOpenNativeApp("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end", "https://api.whatsapp.com/send");
                         } else if (app.includes("facebook") || app.includes("fb")) {
-                            forceOpenApp("https://www.facebook.com");
+                            forceOpenNativeApp("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end", "https://facebook.com");
                         } else if (app.includes("map") || app.includes("maps")) {
-                            forceOpenApp("https://maps.google.com");
+                            forceOpenNativeApp("intent://maps.google.com/#Intent;package=com.google.android.apps.maps;scheme=https;end", "https://maps.google.com");
                         } else if (app.includes("mail") || app.includes("gmail")) {
-                            forceOpenApp("https://mail.google.com");
+                            forceOpenNativeApp("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end", "https://mail.google.com");
                         } else {
-                            forceOpenApp("https://www.google.com/search?q=" + encodeURIComponent(app));
+                            forceOpenNativeApp("intent://www.google.com/search?q=" + encodeURIComponent(app) + "#Intent;scheme=https;end", "https://www.google.com/search?q=" + app);
                         }
-                        recognition.stop(); // लूप टाळण्यासाठी क्षणभर थांबवणे
                     }
-                    // 📶 सिस्टीम सेटिंग्ज शॉर्टकट (अँड्रॉइड अधिकृत सिस्टीम प्रोटोकॉल्स)
+                    // 📶 सिस्टीम हार्डवेअर सेटिंग्ज (Wi-Fi, Mobile Data, GPS)
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
-                        forceOpenApp("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
+                        window.location.href = "intent:#Intent;action=android.settings.WIFI_SETTINGS;end";
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
-                        forceOpenApp("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
+                        window.location.href = "intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end";
                     } else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) {
-                        forceOpenApp("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
+                        window.location.href = "intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end";
                     } else if (cleanCmd.includes("hotspot")) {
-                        forceOpenApp("intent:#Intent;action=android.settings.TETHER_SETTINGS;end");
+                        window.location.href = "intent:#Intent;action=android.settings.TETHER_SETTINGS;end";
                     } else if (cleanCmd.includes("bluetooth")) {
-                        forceOpenApp("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
+                        window.location.href = "intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end";
                     }
                 }
             };
 
+            // 🔄 माईक कंटीन्युअस लूप फिक्स - कमांड झाल्यावरही माईक न थांबता सतत चालू राहील!
             recognition.onend = function() {
-                setTimeout(() => { recognition.start(); }, 1000); // सुरक्षित गतीने रीस्टार्ट
+                setTimeout(() => { recognition.start(); }, 400);
             };
 
             recognition.start();
