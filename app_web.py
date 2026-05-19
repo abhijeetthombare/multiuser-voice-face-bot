@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Multi-User Voice Bot (Smart Auto-Refresh)")
+st.title("🤖 Next-Gen Multi-User Voice Bot (Mic Auto-Refresh)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -90,13 +90,13 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (IFRAME REFRESH FIX)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (PURE MIC REFRESH ENGINE)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE IFRAME AUTO-REFRESH ENGINE ---
+    # --- 🎙️ JAVASCRIPT: THE PURE MIC RE-INSTANCE ENGINE ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
         <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
@@ -107,84 +107,87 @@ else:
         if (!SpeechRecognition) {
             document.getElementById("speech-live").innerText = "Web Speech API not supported.";
         } else {
-            let recognition = new SpeechRecognition();
-            recognition.continuous = true; 
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
-
+            let recognition;
             let actionExecuted = false; 
 
-            function executeInstantAction(intentUrl) {
-                actionExecuted = true; 
-                window.open(intentUrl, '_blank'); 
-                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Will Auto-Refresh Engine when you return.</span>";
-                recognition.stop(); 
+            // 🔥 हे फंक्शन जुना माईक नष्ट करून नवा माईक तयार करतं (Mic Auto-Refresh)
+            function startFreshMic() {
+                if (recognition) {
+                    try { recognition.abort(); } catch(e) {} // जुना माईक मारा
+                }
+
+                recognition = new SpeechRecognition();
+                recognition.continuous = true; 
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = function(event) {
+                    let interimTranscript = '';
+                    let finalTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+
+                    const query = (finalTranscript || interimTranscript).toLowerCase().trim();
+                    document.getElementById("speech-live").innerText = query;
+                    
+                    if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
+                        let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
+                        
+                        function fireIntent(intentUrl) {
+                            actionExecuted = true; 
+                            window.open(intentUrl, '_blank'); 
+                            document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Return here to Auto-Refresh Mic.</span>";
+                            try { recognition.abort(); } catch(e) {} // ॲप उघडल्यावर माईक थांबवा
+                        }
+
+                        // 📱 मूळ अँड्रॉइड ॲप्स
+                        if (cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
+                        else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
+                        else if (cleanCmd.includes("youtube") || cleanCmd.includes("yt")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
+                        else if (cleanCmd.includes("facebook") || cleanCmd.includes("fb")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
+                        else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
+                        else if (cleanCmd.includes("mail") || cleanCmd.includes("gmail")) fireIntent("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end");
+                        
+                        // 📶 सिस्टीम हार्डवेअर
+                        else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
+                        else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) fireIntent("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
+                        else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) fireIntent("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
+                        else if (cleanCmd.includes("hotspot")) fireIntent("intent:#Intent;action=android.settings.TETHER_SETTINGS;end");
+                        else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
+                    }
+                };
+
+                recognition.onend = function() {
+                    // जर ॲप उघडलं नसेल, तर माईक कंटीन्युअस लूपमध्ये चालू ठेवा
+                    if (!actionExecuted) {
+                        setTimeout(() => {
+                            try { recognition.start(); } catch(err) {}
+                        }, 400);
+                    }
+                };
+
+                try { recognition.start(); } catch(e) {}
             }
 
-            // 🔥 जादुई सेन्सर: आता अख्खं पेज नाही, फक्त माईकचा बॉक्स रिफ्रेश होईल (No Streamlit Error!)
+            // 🔥 जादुई सेन्सर: तू परत आल्यावर पेज रिफ्रेश न करता फक्त माईक रिफ्रेश होईल!
             document.addEventListener("visibilitychange", function() {
                 if (document.visibilityState === "visible" && actionExecuted === true) {
-                    document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>🔄 Auto-Refreshing Voice Engine...</span>";
-                    setTimeout(() => {
-                        window.location.reload(); // हे फक्त या बॉक्सला रिफ्रेश करेल आणि माईक नवाकोरा होईल!
-                    }, 800);
+                    actionExecuted = false; // ट्रॅकर रिसेट
+                    document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 Mic Auto-Refreshed! Speak now...</span>";
+                    
+                    // अर्ध्या सेकंदात माईक पूर्णपणे डिलीट करून नवा चालू!
+                    setTimeout(startFreshMic, 500); 
                 }
             });
 
-            recognition.onresult = function(event) {
-                let interimTranscript = '';
-                let finalTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-
-                const query = (finalTranscript || interimTranscript).toLowerCase().trim();
-                document.getElementById("speech-live").innerText = query;
-                
-                if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
-                    let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
-                    
-                    if (cleanCmd.includes("whatsapp")) {
-                        executeInstantAction("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
-                    } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
-                        executeInstantAction("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
-                    } else if (cleanCmd.includes("youtube") || cleanCmd.includes("yt")) {
-                        executeInstantAction("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
-                    } else if (cleanCmd.includes("facebook") || cleanCmd.includes("fb")) {
-                        executeInstantAction("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
-                    } else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) {
-                        executeInstantAction("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
-                    } else if (cleanCmd.includes("mail") || cleanCmd.includes("gmail")) {
-                        executeInstantAction("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end");
-                    }
-                    else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
-                        executeInstantAction("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
-                    } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
-                        executeInstantAction("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
-                    } else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) {
-                        executeInstantAction("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
-                    } else if (cleanCmd.includes("hotspot")) {
-                        executeInstantAction("intent:#Intent;action=android.settings.TETHER_SETTINGS;end");
-                    } else if (cleanCmd.includes("bluetooth")) {
-                        executeInstantAction("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
-                    }
-                }
-            };
-
-            recognition.onend = function() {
-                if (!actionExecuted) {
-                    setTimeout(() => {
-                        try { recognition.start(); } catch(err) {}
-                    }, 500);
-                }
-            };
-
-            try { recognition.start(); } catch(e) {}
+            // पहिल्यांदा ॲप चालू करताना माईक स्टार्ट करा
+            startFreshMic();
         }
     </script>
     """
