@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Multi-User Voice & Face Bot")
+st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Fully Automatic)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -30,7 +30,6 @@ if 'redirect_url' not in st.session_state:
     st.session_state['redirect_url'] = None
 
 # --- ३. JAVASCRIPT DIRECT REDIRECTION ENGINE ---
-# Ha code mobile vrun direct redirection open karto, kontahi server cha locha hot nahi
 if st.session_state['redirect_url']:
     js_code = f"""
     <script>
@@ -38,7 +37,7 @@ if st.session_state['redirect_url']:
     </script>
     """
     components.html(js_code, height=0, width=0)
-    st.session_state['redirect_url'] = None # Execute zalyavar clear karne
+    st.session_state['redirect_url'] = None
 
 # --- ४. MAIN UI RENDERING ---
 col1, col2 = st.columns(2)
@@ -68,7 +67,7 @@ if not st.session_state['authenticated']:
             else:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
-    # 🔑 Tab 2: Biometric Login (NO BUTTON CLICK NEEDED - COMPLETELY AUTOMATIC)
+    # 🔑 Tab 2: Biometric Login (NO BUTTON CLICK NEEDED)
     with tab2:
         st.subheader("चेहरा दाखवून सिस्टीम अनलॉक करा")
         
@@ -78,7 +77,6 @@ if not st.session_state['authenticated']:
             login_name = st.selectbox("तुमचे नाव निवडा (Select Your Name)", list(st.session_state['user_db'].keys()))
             login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फोटो काढा (कॅमेरा समोर या)", key="login_camera")
             
-            # Jevha cam photo gheil, direct processing suru hoil, button chi garajch nahi!
             if login_cam:
                 with st.spinner("🔄 Biometric Analysis in progress..."):
                     try:
@@ -97,37 +95,29 @@ if not st.session_state['authenticated']:
                             st.session_state['current_user'] = login_name
                             st.success(f"🔓 स्वागत आहे {login_name}! सिस्टीम अनलॉक झाली.")
                             time.sleep(0.5)
-                            st.rerun() # Direct UI refresh karun aat ghenar
+                            st.rerun()
                         else:
                             st.error(f"❌ चेहरा मॅच झाला नाही! (Distance Score: {round(diff_ratio, 2)})")
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (UNIVERSAL APP COMMANDS)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (NO BUTTONS - DIRECT STT LISTENING)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     st.info(f"💾 **Last Detected Command:** {st.session_state['last_command']}")
     
-    st.markdown("### 🎙️ Mobile Voice Automation Command Center")
+    st.markdown("### 🎙️ Mobile Voice Automation Hub (Auto-Capture Mode)")
     
-    from streamlit_mic_recorder import speech_to_text
+    # Text input field designed for direct voice-to-text typing from mobile keyboard mic (No buttons needed)
+    query_input = st.text_input("🎙️ Voice Active: Mobile maik var click karun fkt bola:", key="auto_voice_trigger")
     
-    text_received = speech_to_text(
-        start_prompt="🎙️ Start Speaking Command",
-        stop_prompt="🛑 Stop & Process",
-        language='en-US', 
-        key='web_voice_core_fixed',
-        use_container_width=True
-    )
-    
-    if text_received:
-        query = text_received.lower().strip()
+    if query_input:
+        query = query_input.lower().strip()
         st.write(f"🗣️ **सिस्टीमने ऐकलेला शब्द:** `{query}`")
         
         if "python" in query or "paithen" in query or "py" in query:
             clean_command = query.replace("python", "").replace("paithen", "").replace("py", "").strip()
             st.session_state['last_command'] = clean_command
-            st.success(f"⚙️ Action Triggered: `{clean_command}`")
             
             # --- 📚 १. विकिपीडिया सर्च ---
             if 'wikipedia' in clean_command or 'wiki' in clean_command or 'tell me about' in clean_command:
@@ -144,7 +134,7 @@ else:
                 except Exception as wiki_err:
                     st.error(f"विकिपीडिया एरर: {wiki_err}")
             
-            # --- 📱 २. मोबाईल सिस्टीम सेटिंग्ज (True Deep Linking Engine) ---
+            # --- 📱 २. मोबाईल सिस्टीम सेटिंग्ज ---
             elif any(x in clean_command for x in ['wifi', 'wi-fi', 'data', 'internet', 'location', 'gps', 'hotspot', 'tethering', 'bluetooth']):
                 if 'wifi' in clean_command or 'wi-fi' in clean_command:
                     st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.WIFI_SETTINGS;end"
@@ -158,7 +148,7 @@ else:
                     st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end"
                 st.rerun()
             
-            # --- 🚀 ३. युनिव्हर्सल मोबाईल ॲप्स (Direct Web + Deep Links) ---
+            # --- 🚀 ३. युनिव्हर्सल मोबाईल ॲप्स ---
             elif 'open' in clean_command or 'start' in clean_command:
                 app = clean_command.replace("open ", "").replace("start ", "").strip()
                 
