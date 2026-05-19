@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Pure Hands-Free)")
+st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Siri-Instant Mode)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -90,140 +90,105 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (WITH TIMED MIC STOP BUTTON)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (SIRI FAST RESPONSE)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     # इनपुट बॉक्स लपवण्यासाठी CSS
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT NON-STOP VOICE INTERFACE + 5 SEC PAUSE ENGINE ---
+    # --- 🎙️ JAVASCRIPT NATIVE COUPLING (SIRI INSTANT LOOP) ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
-        <p style="margin:0; font-weight:bold; color:#1f77b4;">🗣️ Live Speech (तुमचा आवाज): <span id="speech-live" style="color:#333; font-weight:normal;">Waiting for voice...</span></p>
+        <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Active Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening for commands...</span></p>
     </div>
     
-    <button id="stop-mic-btn" style="width:100%; padding:12px; background-color:#d32f2f; color:white; font-size:16px; font-weight:bold; border:none; border-radius:5px; cursor:pointer; margin-bottom:15px; transition: 0.3s;">🛑 Stop Microphone (5 Seconds Pause)</button>
-    
-    <a id="force-trigger" href="#" target="_blank" style="display:none; padding:10px; background-color:#1f77b4; color:white; text-align:center; border-radius:5px; text-decoration:none; font-weight:bold; margin-top:10px;">⚡ Launching Native App...</a>
+    <button id="stop-mic-btn" style="width:100%; padding:10px; background-color:#d32f2f; color:white; font-weight:bold; border:none; border-radius:5px; cursor:pointer; margin-bottom:15px;">🛑 Stop Microphone (5s Pause)</button>
+    <a id="force-trigger" href="#" target="_blank" style="display:none;"></a>
 
     <script>
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            document.getElementById("speech-live").innerText = "Web Speech API not supported in this browser.";
+            document.getElementById("speech-live").innerText = "Web Speech API not supported.";
         } else {
-            const recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
+            // सिरीसारखं सतत ऐकण्यासाठी ऑब्जेक्ट्स री-डिफाइन केले
+            let recognition = new SpeechRecognition();
+            recognition.continuous = false; // Siri pattern: एका कमांडनंतर बफर फ्रेश करण्यासाठी false केला
+            recognition.interimResults = false; // थेट फायनल रिझल्टवर काम करणार (Fast & Safe)
             recognition.lang = 'en-US';
 
-            let lastExecutionTime = 0;
-            let isPaused = false; // माईक लॉक ट्रॅक करण्यासाठी व्हेरिएबल
+            let isPaused = false;
 
-            // 🛑 स्टॉप बटण क्लिक इव्हेंट
             document.getElementById("stop-mic-btn").addEventListener("click", function() {
                 isPaused = true;
-                recognition.stop(); // माईक तात्काळ थांबवा
-                
+                recognition.stop();
                 let secondsLeft = 5;
                 const uiText = document.getElementById("speech-live");
-                const btn = document.getElementById("stop-mic-btn");
                 
-                btn.disabled = true;
-                btn.style.backgroundColor = "#757575";
-                
-                // ५ सेकंदाचा लाईव्ह काउंटडाऊन टाइमर चालू करा
                 const interval = setInterval(() => {
-                    uiText.innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⏸️ Mic Paused... Restarting in " + secondsLeft + "s</span>";
+                    uiText.innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⏸️ Siri Paused... Restarting in " + secondsLeft + "s</span>";
                     secondsLeft--;
-                    
                     if (secondsLeft < 0) {
                         clearInterval(interval);
-                        // ५ सेकंद संपताच पूर्ण पेज रीफ्रेश करून माईक आपोआप ऑन करणे
                         window.parent.location.reload();
                     }
                 }, 1000);
             });
 
-            function executeAction(intentUrl) {
-                if (isPaused) return; // जर पाझ असेल तर कोणतीही कमांड धावणार नाही
-                
+            function executeInstantAction(intentUrl) {
+                if (isPaused) return;
                 const triggerBtn = document.getElementById("force-trigger");
                 triggerBtn.href = intentUrl;
-                triggerBtn.style.display = "block";
-                
-                setTimeout(() => { triggerBtn.click(); }, 500);
-                setTimeout(() => { triggerBtn.style.display = "none"; }, 2000);
+                triggerBtn.click(); // इमिजिएट ऑटो-क्लिक (No delay)
             }
 
             recognition.onresult = function(event) {
-                if (isPaused) return; // पाझ असेल तर आवाज ऐकू नका
-
-                let interimTranscript = '';
-                let finalTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-
-                const currentText = finalTranscript || interimTranscript;
-                document.getElementById("speech-live").innerText = currentText;
+                if (isPaused) return;
                 
-                const query = currentText.toLowerCase().trim();
-                const now = Date.now();
+                // थेट अंतिम ऐकलेला शब्द पकडणे
+                const resultIndex = event.resultIndex;
+                const query = event.results[resultIndex][0].transcript.toLowerCase().trim();
+                document.getElementById("speech-live").innerText = query;
                 
-                if ((query.includes("python") || query.includes("paithen") || query.includes("py")) && (now - lastExecutionTime > 2000)) {
+                if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
                     let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
                     
-                    // 📱 १. मोबाईल ओरिजिनल ॲप्स थेट इंटेंट्स
+                    // 📱 १. मूळ अँड्रॉइड ॲप्स (Siri speed)
                     if (cleanCmd.includes("whatsapp")) {
-                        lastExecutionTime = now;
-                        executeAction("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
+                        executeInstantAction("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
                     } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
-                        lastExecutionTime = now;
-                        executeAction("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
+                        executeInstantAction("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
                     } else if (cleanCmd.includes("youtube") || cleanCmd.includes("yt")) {
-                        lastExecutionTime = now;
-                        executeAction("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
+                        executeInstantAction("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
                     } else if (cleanCmd.includes("facebook") || cleanCmd.includes("fb")) {
-                        lastExecutionTime = now;
-                        executeAction("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
+                        executeInstantAction("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
                     } else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) {
-                        lastExecutionTime = now;
-                        executeAction("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
+                        executeInstantAction("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
                     } else if (cleanCmd.includes("mail") || cleanCmd.includes("gmail")) {
-                        lastExecutionTime = now;
-                        executeAction("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end");
+                        executeInstantAction("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end");
                     }
                     
-                    // 📶 २. मोबाईल हार्डवेअर सिस्टीम थेट सेटिंग्ज
+                    // 📶 २. सिस्टीम हार्डवेअर
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
-                        lastExecutionTime = now;
-                        executeAction("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
+                        executeInstantAction("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
-                        lastExecutionTime = now;
-                        executeAction("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
+                        executeInstantAction("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
                     } else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) {
-                        lastExecutionTime = now;
-                        executeAction("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
+                        executeInstantAction("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
                     } else if (cleanCmd.includes("hotspot")) {
-                        lastExecutionTime = now;
-                        executeAction("intent:#Intent;action=android.settings.TETHER_SETTINGS;end");
+                        executeInstantAction("intent:#Intent;action=android.settings.TETHER_SETTINGS;end");
                     } else if (cleanCmd.includes("bluetooth")) {
-                        lastExecutionTime = now;
-                        executeAction("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
+                        executeInstantAction("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
                     }
                 }
             };
 
+            // 🔄 सिरीसारखं एकापाठोपाठ एक ऐकण्यासाठी इंजिन संपताच १ मिलिसेकंदात पूर्ण मेमरी फ्रेश करून रीस्टार्ट!
             recognition.onend = function() {
-                // जर युझरने स्वतःहून बटण दाबून पाझ केलं नसेल, तरच माईक continuous सुरू राहील
                 if (!isPaused) {
-                    try { recognition.start(); } catch(err) {}
+                    setTimeout(() => {
+                        try { recognition.start(); } catch(err) {}
+                    }, 1);
                 }
             };
 
@@ -231,7 +196,7 @@ else:
         }
     </script>
     """
-    components.html(js_stable_engine, height=240) # बटणासाठी हाईट वाढवली
+    components.html(js_stable_engine, height=240)
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
