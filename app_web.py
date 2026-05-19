@@ -88,13 +88,13 @@ if not st.session_state['authenticated']:
                         else:
                             st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})")
                     except Exception as e:
-                        st.error(f"प्रмаणीकरण एरर: {e}")
+                        st.error(f"प्रमाणीकरण एरर: {e}")
 
 # 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% STABLE FRONTEND VOICE)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
-    # टेक्स्ट बॉक्स लपवण्यासाठी कडक CSS
+    # रिकामा टेक्स्ट बॉक्स पूर्णपणे अदृश्य करण्यासाठी CSS
     st.markdown(
         """
         <style>
@@ -122,14 +122,11 @@ else:
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
-            // 🚀 मूळ मोबाईल ॲप्स आणि हार्डवेअर डायरेक्ट ट्रिगर करणारे फंक्शन
+            // 🚀 मोबाईल अ‍ॅप्स आणि सिस्टीम शॉर्टकट उघडणारे फंक्शन
             function launchDirectIntent(targetUrl) {
                 recognition.stop(); // ब्राउझर सिक्युरिटी ब्लॉक टाळण्यासाठी तात्पुरते स्टॉप
-                
-                // डायरेक्ट लोकेशन चेंज (Chrome याला ब्लॉक करू शकत नाही)
-                window.location.href = targetUrl;
+                window.location.href = targetUrl; // डायरेक्ट लोकेशन चेंज
 
-                // १.५ सेकंदानंतर माईक पूर्ण फ्रेश आणि कंटीन्युअस सुरू होईल
                 setTimeout(() => {
                     try { recognition.start(); } catch(err) {}
                 }, 1500);
@@ -152,30 +149,26 @@ else:
                 
                 const query = currentText.toLowerCase().trim();
                 
+                // 🔐 'Python' हा कीवर्ड येताच पुढे जे नाव असेल ते डायरेक्ट ओपन होईल (No 'Open' word dependency!)
                 if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
-                    let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").trim();
+                    let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
                     
-                    if (cleanCmd.includes("open") || cleanCmd.includes("start")) {
-                        let app = cleanCmd.replace("open", "").replace("start", "").trim();
-                        
-                        // 🔥 मोबाईल ओरिजिनल ॲप्स डायरेक्ट ओपनर लिंक्स (No Google Search!)
-                        if (app.includes("whatsapp")) {
-                            launchDirectIntent("whatsapp://send");
-                        } else if (app.includes("instagram") || app.includes("insta")) {
-                            launchDirectIntent("instagram://app");
-                        } else if (app.includes("youtube") || app.includes("yt")) {
-                            launchDirectIntent("youtube://");
-                        } else if (app.includes("facebook") || app.includes("fb")) {
-                            launchDirectIntent("fb://");
-                        } else if (app.includes("map") || app.includes("maps")) {
-                            launchDirectIntent("geo:0,0?q=maps");
-                        } else if (app.includes("mail") || app.includes("gmail")) {
-                            launchDirectIntent("googlegmail://");
-                        } else {
-                            launchDirectIntent("https://www.google.com/search?q=" + encodeURIComponent(app));
-                        }
+                    // 🔥 १. मोबाईल ओरिजिनल ॲप्स डायरेक्ट मॅचिंग
+                    if (cleanCmd.includes("whatsapp")) {
+                        launchDirectIntent("whatsapp://send");
+                    } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
+                        launchDirectIntent("instagram://app");
+                    } else if (cleanCmd.includes("youtube") || cleanCmd.includes("yt")) {
+                        launchDirectIntent("youtube://");
+                    } else if (cleanCmd.includes("facebook") || cleanCmd.includes("fb")) {
+                        launchDirectIntent("fb://");
+                    } else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) {
+                        launchDirectIntent("geo:0,0?q=maps");
+                    } else if (cleanCmd.includes("mail") || cleanCmd.includes("gmail")) {
+                        launchDirectIntent("googlegmail://");
                     }
-                    // 📶 मोबाईल सिस्टीम हार्डवेअर थेट सेटिंग्ज
+                    
+                    // 📶 २. मोबाईल हार्डवेअर सिस्टीम सेटिंग्ज मॅचिंग
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
                         launchDirectIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
