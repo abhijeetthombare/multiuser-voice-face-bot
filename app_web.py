@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Pure Hands-Free)")
+st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Non-Stop Multi-Tasking)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -23,6 +23,8 @@ if 'current_user' not in st.session_state:
     st.session_state['current_user'] = None
 if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
+if 'embedded_url' not in st.session_state:
+    st.session_state['embedded_url'] = "https://www.google.com/search?igu=1" # सुरक्षित डिफॉल्ट फ्रेम
 
 # --- ३. MAIN UI RENDERING ---
 col1, col2 = st.columns(2)
@@ -90,58 +92,51 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% WORKING FRONTEND ENGINE)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% NON-STOP FRONTEND ENGINE)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
-    # जुना रिकामा टेक्स्ट बॉक्स लपवण्यासाठी CSS
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stTextInput"] {
-            display: none !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    # गुपचूप पायथॉनला डेटा पाठवण्यासाठी ब्रिज (CSS ने लपवलेला)
+    st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
+    
+    # पायथॉनमध्ये इम्बेड करायची लिंक चेंज करण्यासाठी लपवलेला इनपुट
+    url_bridge = st.text_input("", key="js_url_bridge", value=st.session_state['embedded_url'])
+    if url_bridge != st.session_state['embedded_url']:
+        st.session_state['embedded_url'] = url_bridge
+        st.rerun()
 
-    # --- 🎙️ JAVASCRIPT POPUP-BLOCKER BYPASS ENGINE (ULTIMATE WORK FIX) ---
+    # --- 🎙️ JAVASCRIPT NON-STOP VOICE & ACTION ENGINE ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
         <p style="margin:0; font-weight:bold; color:#1f77b4;">🗣️ Live Speech (तुमचा आवाज): <span id="speech-live" style="color:#333; font-weight:normal;">Waiting for voice...</span></p>
     </div>
     
-    <a id="force-trigger" href="#" target="_blank" style="display:none; padding:10px; background-color:#1f77b4; color:white; text-align:center; border-radius:5px; text-decoration:none; font-weight:bold; margin-top:10px;">⚡ Launching Native App...</a>
+    <a id="system-trigger" href="#" target="_blank" style="display:none; padding:10px; background-color:#1f77b4; color:white; text-align:center; border-radius:5px; text-decoration:none; font-weight:bold;">⚡ Launching System Intent...</a>
 
     <script>
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            document.getElementById("speech-live").innerText = "Web Speech API not supported in this browser.";
+            document.getElementById("speech-live").innerText = "Web Speech API not supported.";
         } else {
             const recognition = new SpeechRecognition();
             recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
-            // 👑 क्रोम सुरक्षा तोडणारं अधिकृत ऑटो-क्लिक इंजिन फंक्शन
-            function executeAction(intentUrl) {
-                recognition.stop(); // माईक तात्पुरता थांबवा
-                
-                const triggerBtn = document.getElementById("force-trigger");
-                triggerBtn.href = intentUrl;
-                triggerBtn.style.display = "block"; // स्क्रीनवर निळं बटण दिसेल
-                
-                // ⚡ जादुई ऑटो-क्लिक इव्हेंट सिम्युलेशन (Chrome Security Bypass!)
-                setTimeout(() => {
-                    triggerBtn.click();
-                }, 100);
+            function triggerMobileHardware(intentUrl) {
+                const btn = document.getElementById("system-trigger");
+                btn.href = intentUrl;
+                btn.style.display = "block";
+                setTimeout(() => { btn.click(); btn.style.display = "none"; }, 100);
+            }
 
-                // २ सेकंदात अ‍ॅप उघडून माईक पुन्हा continuous मोडवर येईल
-                setTimeout(() => {
-                    triggerBtn.style.display = "none";
-                    try { recognition.start(); } catch(err) {}
-                }, 2000);
+            function changeEmbeddedApp(targetUrl) {
+                // स्ट्रीमलिटच्या आयफ्रेममध्ये ॲप लोड करण्यासाठी पायथॉनला लिंक पाठवणे
+                window.parent.postMessage({
+                    type: 'streamlit:set_widget_value',
+                    from: 'js_url_bridge',
+                    value: targetUrl
+                }, '*');
             }
 
             recognition.onresult = function(event) {
@@ -164,50 +159,54 @@ else:
                 if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
                     let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
                     
-                    // 📱 १. मोबाईल ओरिजिनल ॲप्स थेट इंटेंट्स (पॉपअप ब्लॉकर बायपास)
+                    // 🚀 जादुई ॲप चेंजर्स (स्क्रीन न सोडता अंतर्गत उघडणार!)
                     if (cleanCmd.includes("whatsapp")) {
-                        executeAction("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
-                    } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
-                        executeAction("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
+                        changeEmbeddedApp("https://web.whatsapp.com");
                     } else if (cleanCmd.includes("youtube") || cleanCmd.includes("yt")) {
-                        executeAction("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
+                        changeEmbeddedApp("https://www.youtube.com/embed/");
+                    } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
+                        changeEmbeddedApp("https://www.instagram.com");
                     } else if (cleanCmd.includes("facebook") || cleanCmd.includes("fb")) {
-                        executeAction("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
+                        changeEmbeddedApp("https://www.facebook.com");
                     } else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) {
-                        executeAction("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
-                    } else if (cleanCmd.includes("mail") || cleanCmd.includes("gmail")) {
-                        executeAction("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end");
+                        changeEmbeddedApp("https://maps.google.com/maps?output=embed");
                     }
                     
-                    // 📶 २. मोबाईल हार्डवेअर सिस्टीम थेट सेटिंग्ज
+                    // 📶 मोबाईल सिस्टीम हार्डवेअर शॉर्टकट्स (पॉपअप ब्लॉकर बायपास)
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
-                        executeAction("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
+                        triggerMobileHardware("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
-                        executeAction("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
+                        triggerMobileHardware("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
                     } else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) {
-                        executeAction("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
+                        triggerMobileHardware("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
                     } else if (cleanCmd.includes("hotspot")) {
-                        executeAction("intent:#Intent;action=android.settings.TETHER_SETTINGS;end");
+                        triggerMobileHardware("intent:#Intent;action=android.settings.TETHER_SETTINGS;end");
                     } else if (cleanCmd.includes("bluetooth")) {
-                        executeAction("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
+                        triggerMobileHardware("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
                     }
                 }
             };
 
             recognition.onend = function() {
-                setTimeout(() => {
-                    try { recognition.start(); } catch(err) {}
-                }, 500);
+                try { recognition.start(); } catch(err) {}
             };
 
             recognition.start();
         }
     </script>
     """
-    components.html(js_stable_engine, height=180)
+    components.html(js_stable_engine, height=110)
+
+    # --- 👑 THE MAGICAL EMBEDDED MONITOR (MULTI-TASKING SCREEN) ---
+    st.markdown("### 📱 Active Embedded Interface Window")
+    st.write("खालील विंडोमध्ये तुमचे ॲप चालू राहील आणि माईक सतत तुमचे आवाज ऐकत राहील!")
+    
+    # ही ती कडक विंडो आहे जिथे ॲप उघडेल पण माईक कधीच बंद पडणार नाही!
+    st.components.v1.iframe(st.session_state['embedded_url'], height=600, scrolling=True)
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
         st.session_state['authenticated'] = False
         st.session_state['current_user'] = None
+        st.session_state['embedded_url'] = "https://www.google.com/search?igu=1"
         st.rerun()
