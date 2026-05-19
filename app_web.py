@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Pure Hands-Free Auto-Refresh)")
+st.title("🤖 Next-Gen Multi-User Voice Bot (Smart Wake-Up Mode)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -90,17 +90,16 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% PURE AUTOMATIC REFRESH)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (TAB-FOCUS WAKE-UP FIX)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
-    # इनपुट बॉक्स लपवण्यासाठी CSS
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT NATIVE COUPLING (HANDS-FREE FORCED AUTO-RELOAD) ---
+    # --- 🎙️ JAVASCRIPT: NO REFRESH, JUST SMART WAKE-UP ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
-        <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Hands-Free Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening for commands...</span></p>
+        <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
     </div>
 
     <script>
@@ -109,40 +108,35 @@ else:
             document.getElementById("speech-live").innerText = "Web Speech API not supported.";
         } else {
             let recognition = new SpeechRecognition();
-            recognition.continuous = false; 
-            recognition.interimResults = false;
+            recognition.continuous = true; 
+            recognition.interimResults = true;
             recognition.lang = 'en-US';
 
-            let commandTriggered = false; // डबल ट्रिगर रोखण्यासाठी
-
             function executeInstantAction(intentUrl) {
-                if (commandTriggered) return;
-                commandTriggered = true;
-                
-                recognition.stop(); // माईक थांबवा
-                
-                // १. नवीन टॅबमध्ये ॲप सुसाट उघडा
+                // ॲप नवीन टॅबमध्ये उघडेल, आपलं पेज शांत राहील
                 window.open(intentUrl, '_blank');
-                
-                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ Command Executed! Auto-Refreshing page in 1s...</span>";
-                
-                # 🔥 १ सेकंदात (1000ms) बटण न दाबता अख्खं मुख्य पेज बळजबरीने ऑटो-रिफ्रेश होईल!
-                setTimeout(() => {
-                    window.parent.location.href = window.parent.location.href;
-                }, 1000);
+                document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>⚡ App Opened! Come back to this tab to give the next command.</span>";
             }
 
             recognition.onresult = function(event) {
-                if (commandTriggered) return;
-                
-                const resultIndex = event.resultIndex;
-                const query = event.results[resultIndex][0].transcript.toLowerCase().trim();
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                const query = (finalTranscript || interimTranscript).toLowerCase().trim();
                 document.getElementById("speech-live").innerText = query;
                 
                 if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
                     let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
                     
-                    // 📱 मूळ अँड्रॉइड ॲप्स ट्रिगर्स
+                    // 📱 मूळ अँड्रॉइड ॲप्स
                     if (cleanCmd.includes("whatsapp")) {
                         executeInstantAction("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
                     } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
@@ -157,7 +151,7 @@ else:
                         executeInstantAction("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end");
                     }
                     
-                    // 📶 सिस्टीम हार्डवेअर सेटिंग्ज
+                    // 📶 सिस्टीम हार्डवेअर
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
                         executeInstantAction("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
@@ -173,16 +167,26 @@ else:
             };
 
             recognition.onend = function() {
-                if (!commandTriggered) {
+                setTimeout(() => {
                     try { recognition.start(); } catch(err) {}
-                }
+                }, 500);
             };
 
-            recognition.start();
+            // 🔥 हा आहे सर्वात कडक मास्टर स्ट्रोक:
+            // जेव्हा तू मोबाईलमध्ये ॲप बघून परत स्ट्रीमलिटच्या टॅबवर येशील, तेव्हा माईक स्वतःहून उठून बसेल!
+            document.addEventListener("visibilitychange", function() {
+                if (document.visibilityState === "visible") {
+                    try { recognition.start(); } catch(e) {}
+                    document.getElementById("speech-live").innerText = "Listening continuously...";
+                }
+            });
+
+            // सुरुवातीला माईक चालू करा
+            try { recognition.start(); } catch(e) {}
         }
     </script>
     """
-    components.html(js_stable_engine, height=130) # क्लीन लूकसाठी हाईट कमी केली
+    components.html(js_stable_engine, height=130)
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
