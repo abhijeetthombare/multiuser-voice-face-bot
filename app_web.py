@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Multi-User Voice Bot (Mic Auto-Refresh)")
+st.title("🤖 Next-Gen Multi-User Voice Bot (One-Tap Wakeup)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -90,16 +90,18 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (PURE MIC REFRESH ENGINE)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (PRACTICAL ONE-TAP WAKEUP)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE PURE MIC RE-INSTANCE ENGINE ---
+    # --- 🎙️ JAVASCRIPT: THE ONE-TAP WAKEUP ENGINE ---
     js_stable_engine = """
-    <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
-        <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
+    <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center;">
+        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:10px;">🍏 Siri Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
+        
+        <button id="wakeup-btn" style="display:none; width:100%; padding:15px; background-color:#2ecc71; color:white; font-size:18px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🎤 Tap Here to Resume Siri</button>
     </div>
 
     <script>
@@ -110,10 +112,9 @@ else:
             let recognition;
             let actionExecuted = false; 
 
-            // 🔥 हे फंक्शन जुना माईक नष्ट करून नवा माईक तयार करतं (Mic Auto-Refresh)
             function startFreshMic() {
                 if (recognition) {
-                    try { recognition.abort(); } catch(e) {} // जुना माईक मारा
+                    try { recognition.abort(); } catch(e) {} 
                 }
 
                 recognition = new SpeechRecognition();
@@ -142,8 +143,8 @@ else:
                         function fireIntent(intentUrl) {
                             actionExecuted = true; 
                             window.open(intentUrl, '_blank'); 
-                            document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Return here to Auto-Refresh Mic.</span>";
-                            try { recognition.abort(); } catch(e) {} // ॲप उघडल्यावर माईक थांबवा
+                            document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Siri is Paused.</span>";
+                            try { recognition.abort(); } catch(e) {} 
                         }
 
                         // 📱 मूळ अँड्रॉइड ॲप्स
@@ -164,7 +165,6 @@ else:
                 };
 
                 recognition.onend = function() {
-                    // जर ॲप उघडलं नसेल, तर माईक कंटीन्युअस लूपमध्ये चालू ठेवा
                     if (!actionExecuted) {
                         setTimeout(() => {
                             try { recognition.start(); } catch(err) {}
@@ -175,23 +175,27 @@ else:
                 try { recognition.start(); } catch(e) {}
             }
 
-            // 🔥 जादुई सेन्सर: तू परत आल्यावर पेज रिफ्रेश न करता फक्त माईक रिफ्रेश होईल!
+            // 🔥 जेव्हा तू परत येशील, तेव्हा माईक सुरू न करता आधी हे मोठं बटण दाखव (Google ला Touch हवाय!)
             document.addEventListener("visibilitychange", function() {
                 if (document.visibilityState === "visible" && actionExecuted === true) {
-                    actionExecuted = false; // ट्रॅकर रिसेट
-                    document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 Mic Auto-Refreshed! Speak now...</span>";
-                    
-                    // अर्ध्या सेकंदात माईक पूर्णपणे डिलीट करून नवा चालू!
-                    setTimeout(startFreshMic, 500); 
+                    document.getElementById("wakeup-btn").style.display = "block"; // बटण दाखवा
                 }
             });
 
-            // पहिल्यांदा ॲप चालू करताना माईक स्टार्ट करा
+            // 👆 युझरने बटणावर टच केला की माईक फ्रेश चालू करा!
+            document.getElementById("wakeup-btn").addEventListener("click", function() {
+                actionExecuted = false; 
+                this.style.display = "none"; // टच केल्यावर बटण लपवा
+                document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 Siri is ACTIVE! Speak now...</span>";
+                startFreshMic(); // आता गुगल माईक देईल कारण टच झालाय!
+            });
+
+            // पहिल्यांदा चालू करा
             startFreshMic();
         }
     </script>
     """
-    components.html(js_stable_engine, height=130)
+    components.html(js_stable_engine, height=180)
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
