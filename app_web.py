@@ -4,7 +4,6 @@ import numpy as np
 import io
 import os
 import time
-import requests
 from PIL import Image, ImageChops, ImageStat
 
 # --- १. PAGE SET-UP & THEME ---
@@ -24,24 +23,8 @@ if 'current_user' not in st.session_state:
     st.session_state['current_user'] = None
 if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
-if 'last_command' not in st.session_state:
-    st.session_state['last_command'] = "None"
-if 'redirect_url' not in st.session_state:
-    st.session_state['redirect_url'] = None
-if 'live_speech' not in st.session_state:
-    st.session_state['live_speech'] = "काहीही ऐकले नाही (Waiting for voice...)"
 
-# --- ३. JAVASCRIPT DIRECT REDIRECTION ENGINE ---
-if st.session_state['redirect_url']:
-    js_redirect = f"""
-    <script>
-        window.open("{st.session_state['redirect_url']}", "_blank");
-    </script>
-    """
-    components.html(js_redirect, height=0, width=0)
-    st.session_state['redirect_url'] = None
-
-# --- ४. MAIN UI RENDERING ---
+# --- ३. MAIN UI RENDERING ---
 col1, col2 = st.columns(2)
 with col1:
     status_text = f"🔓 UNLOCKED ({st.session_state['current_user']})" if st.session_state['authenticated'] else "LOCKED 🔒"
@@ -51,7 +34,7 @@ with col2:
 
 st.write("---")
 
-# --- ५. REGISTRATION & AUTOMATIC LOGIN TABS ---
+# --- ४. REGISTRATION & AUTOMATIC LOGIN TABS ---
 if not st.session_state['authenticated']:
     tab1, tab2 = st.tabs(["📝 New User Registration", "🔑 Automatic Biometric Login"])
     
@@ -69,7 +52,7 @@ if not st.session_state['authenticated']:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
     with tab2:
-        st.subheader("फक्त कॅमेरा समोर या - सिस्टीम स्वतः ओळखेल")
+        st.subheader("फक्त कॅмера समोर या - सिस्टीम स्वतः ओळखेल")
         
         if len(st.session_state['user_db']) == 0:
             st.warning("⚠️ आधी रजिस्ट्रेशन टॅबमध्ये जाऊन किमान एका युझरची नोंदणी करा.")
@@ -101,128 +84,104 @@ if not st.session_state['authenticated']:
                         if match_found:
                             st.session_state['authenticated'] = True
                             st.session_state['current_user'] = identified_user
-                            st.success(f"🔓 स्वागत आहे {identified_user}! चेहरा ओळखला गेला आहे.")
-                            time.sleep(0.5)
                             st.rerun()
                         else:
                             st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})")
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% HANDS-FREE VOICE)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% STABLE FRONTEND VOICE)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
+    st.markdown("🌐 **Status:** `माईक ऑन आहे. थेट बोला (उदा: 'Python open youtube')`")
     
-    # लपवलेला इनपुट बॉक्स पूर्णपणे अदृश्य करण्यासाठी CSS
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stTextInput"] {
-            display: none !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    # 🤫 UI क्लिन ठेवण्यासाठी स्टेटस कार्ड्स
+    st.info("🎙️ Live Speech UI linked directly to Browser Speech Engine.")
 
-    # --- 🎙️ PURE JAVASCRIPT BACKGROUND LIVE STT ENGINE (LOOP FIXED) ---
-    js_speech_engine = """
+    # --- 🎙️ JAVASCRIPT ULTRA STABLE VOICE INTERFACE ---
+    # हा कोड थेट ब्राऊझर लेव्हलवर चालतो, त्यामुळे माईक कधीच बंद-चालू होणार नाही!
+    js_stable_engine = """
+    <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
+        <p style="margin:0; font-weight:bold; color:#1f77b4;">🗣️ Live Speech (तुमचा आवाज): <span id="speech-live" style="color:#333; font-weight:normal;">Waiting for voice...</span></p>
+    </div>
+
     <script>
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            console.log("Web Speech API not supported.");
+            document.getElementById("speech-live").innerText = "Web Speech API not supported in this browser.";
         } else {
             const recognition = new SpeechRecognition();
             recognition.continuous = true;
-            recognition.interimResults = true; // लाईव्ह बोलताना शब्द दिसण्यासाठी True केले
+            recognition.interimResults = true;
             recognition.lang = 'en-US';
 
             recognition.onresult = function(event) {
-                const current = event.resultIndex;
-                const transcript = event.results[current][0].transcript;
-                const isFinal = event.results[current].isFinal;
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                const currentText = finalTranscript || interimTranscript;
+                document.getElementById("speech-live").innerText = currentText;
                 
-                // स्ट्रीमलिटच्या ब्रिज बॉक्समध्ये डेटा पाठवणे
-                window.parent.postMessage({
-                    type: 'streamlit:set_widget_value',
-                    from: 'js_voice_bridge',
-                    value: transcript
-                }, '*');
+                const query = currentText.toLowerCase().trim();
+                
+                // ⚡ एक्झिक्युशन थेट फ्रंटएंडवरून (लूप होणारच नाही!)
+                if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
+                    let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").trim();
+                    
+                    if (cleanCmd.includes("open") || cleanCmd.includes("start")) {
+                        let app = cleanCmd.replace("open", "").replace("start", "").trim();
+                        
+                        if (app.includes("instagram") || app.includes("insta")) {
+                            window.open("instagram://app", "_blank");
+                        } else if (app.includes("youtube") || app.includes("yt")) {
+                            window.open("youtube://", "_blank");
+                        } else if (app.includes("whatsapp")) {
+                            window.open("whatsapp://send", "_blank");
+                        } else if (app.includes("facebook") || app.includes("fb")) {
+                            window.open("fb://", "_blank");
+                        } else if (app.includes("map")) {
+                            window.open("geo:0,0?q=maps", "_blank");
+                        } else if (app.includes("mail") || app.includes("gmail")) {
+                            window.open("googlegmail://", "_blank");
+                        } else {
+                            window.open("https://www.google.com/search?q=" + app, "_blank");
+                        }
+                    }
+                    // 📶 सिस्टीम सेटिंग्ज शॉर्टकट
+                    else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
+                        window.open("intent:#Intent;action=android.settings.WIFI_SETTINGS;end", "_blank");
+                    } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
+                        window.open("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end", "_blank");
+                    } else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) {
+                        window.open("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
+                    } else if (cleanCmd.includes("hotspot")) {
+                        window.open("intent:#Intent;action=android.settings.TETHER_SETTINGS;end", "_blank");
+                    } else if (cleanCmd.includes("bluetooth")) {
+                        window.open("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end", "_blank");
+                    }
+                }
             };
 
             recognition.onend = function() {
-                recognition.start(); // कंटिन्यूअस लूप सुरू ठेवणे
+                recognition.start(); // माईक जिवंत ठेवणे
             };
 
             recognition.start();
         }
     </script>
     """
-    components.html(js_speech_engine, height=0, width=0)
-    
-    # व्हॉईस डेटा ब्रिज (हा मागच्या वेळी CSS मुळे लपवला होता आणि लूप करत होता)
-    heard_text = st.text_input("", key="js_voice_bridge", label_visibility="collapsed")
-    
-    # जर माईकने नवीन आवाज ऐकला, तर तो थेट स्क्रीनवर दाखवणे
-    if heard_text and heard_text != st.session_state['live_speech']:
-        st.session_state['live_speech'] = heard_text
-        query = heard_text.lower().strip()
-        
-        # जर कमांडमध्ये 'python' असेल तरच त्याला अंतिम एक्झिक्युशनसाठी पाठवणे
-        if "python" in query or "paithen" in query or "py" in query:
-            st.session_state['last_command'] = query
-
-    # ✨ इकडे बघ भावा! तू जे काही बOptionशेल ते इथे लाइव्ह दिसणार!
-    st.info(f"🗣️ **सिस्टीमने ऐकलेला थेट आवाज (Live Speech):** `{st.session_state['live_speech']}`")
-    st.success(f"💾 **लास्ट एक्झिक्युटेड कमांड:** `{st.session_state['last_command']}`")
-    st.markdown("🌐 **Status:** `माईक ऑन आहे. थेट बोला (उदा: 'Python open youtube')`")
-
-    # --- ⚡ COMMAND EXECUTION ENGINE (NO-LOOP FIX) ---
-    cmd = st.session_state['last_command']
-    if cmd != "None":
-        clean_command = cmd.replace("python", "").replace("paithen", "").replace("py", "").strip()
-        
-        # सर्वात आधी स्टेट्स रीसेट करणे जेणेकरून लूप थांबेल
-        st.session_state['last_command'] = "None" 
-        st.session_state['live_speech'] = "काहीही ऐकले नाही (Waiting for voice...)"
-        
-        # --- १. मोबाईल सिस्टीम सेटिंग्ज ---
-        if any(x in clean_command for x in ['wifi', 'wi-fi', 'data', 'internet', 'location', 'gps', 'hotspot', 'tethering', 'bluetooth']):
-            if 'wifi' in clean_command or 'wi-fi' in clean_command:
-                st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.WIFI_SETTINGS;end"
-            elif 'data' in clean_command or 'internet' in clean_command:
-                st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end"
-            elif 'location' in clean_command or 'gps' in clean_command:
-                st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end"
-            elif 'hotspot' in clean_command or 'tethering' in clean_command:
-                st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.TETHER_SETTINGS;end"
-            elif 'bluetooth' in clean_command:
-                st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end"
-            st.rerun()
-        
-        # --- २. युनिव्हर्सल मोबाईल ॲप्स ---
-        elif 'open' in clean_command or 'start' in clean_command:
-            app = clean_command.replace("open ", "").replace("start ", "").strip()
-            if 'instagram' in app or 'insta' in app:
-                st.session_state['redirect_url'] = "instagram://app"
-            elif 'youtube' in app or 'yt' in app:
-                st.session_state['redirect_url'] = "youtube://"
-            elif 'whatsapp' in app:
-                st.session_state['redirect_url'] = "whatsapp://send"
-            elif 'facebook' in app or 'fb' in app:
-                st.session_state['redirect_url'] = "fb://"
-            elif 'maps' in app or 'map' in app:
-                st.session_state['redirect_url'] = "geo:0,0?q=maps"
-            elif 'gmail' in app or 'mail' in app:
-                st.session_state['redirect_url'] = "googlegmail://"
-            else:
-                st.session_state['redirect_url'] = f"https://www.google.com/search?q={app}"
-            st.rerun()
+    components.html(js_stable_engine, height=100)
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
         st.session_state['authenticated'] = False
         st.session_state['current_user'] = None
-        st.session_state['last_command'] = "None"
-        st.session_state['live_speech'] = "काहीही ऐकले नाही (Waiting for voice...)"
         st.rerun()
