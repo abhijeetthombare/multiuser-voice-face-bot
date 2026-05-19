@@ -52,7 +52,7 @@ if not st.session_state['authenticated']:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
     with tab2:
-        st.subheader("फक्त कॅмера समोर या - सिस्टीम स्वतः ओळखेल")
+        st.subheader("फक्त कॅमेरा समोर या - सिस्टीम स्वतः ओळखेल")
         
         if len(st.session_state['user_db']) == 0:
             st.warning("⚠️ आधी रजिस्ट्रेशन टॅबमध्ये जाऊन किमान एका युझरची नोंदणी करा.")
@@ -95,11 +95,9 @@ else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     st.markdown("🌐 **Status:** `माईक ऑन आहे. थेट बोला (उदा: 'Python open youtube')`")
     
-    # 🤫 UI क्लिन ठेवण्यासाठी स्टेटस कार्ड्स
     st.info("🎙️ Live Speech UI linked directly to Browser Speech Engine.")
 
-    # --- 🎙️ JAVASCRIPT ULTRA STABLE VOICE INTERFACE ---
-    # हा कोड थेट ब्राऊझर लेव्हलवर चालतो, त्यामुळे माईक कधीच बंद-चालू होणार नाही!
+    # --- 🎙️ JAVASCRIPT ULTRA STABLE VOICE INTERFACE (REPAIRED FOR MOBILE APPS) ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
         <p style="margin:0; font-weight:bold; color:#1f77b4;">🗣️ Live Speech (तुमचा आवाज): <span id="speech-live" style="color:#333; font-weight:normal;">Waiting for voice...</span></p>
@@ -114,6 +112,17 @@ else:
             recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = 'en-US';
+
+            // मोबाईल ब्राउझर सुरक्षा बायपास करण्यासाठी कस्टम लिंक ओपनर फंक्शन
+            function forceOpenApp(targetUrl) {
+                const a = document.createElement('a');
+                a.href = targetUrl;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
 
             recognition.onresult = function(event) {
                 let interimTranscript = '';
@@ -132,53 +141,54 @@ else:
                 
                 const query = currentText.toLowerCase().trim();
                 
-                // ⚡ एक्झिक्युशन थेट फ्रंटएंडवरून (लूप होणारच नाही!)
                 if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
                     let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").trim();
                     
                     if (cleanCmd.includes("open") || cleanCmd.includes("start")) {
                         let app = cleanCmd.replace("open", "").replace("start", "").trim();
                         
+                        // 🚀 अधिकृत मोबाईल डीप लिंक्स फिक्स (वेब आणि अ‍ॅप दोन्ही कव्हर केले)
                         if (app.includes("instagram") || app.includes("insta")) {
-                            window.open("instagram://app", "_blank");
+                            forceOpenApp("https://instagram.com/_u/");
                         } else if (app.includes("youtube") || app.includes("yt")) {
-                            window.open("youtube://", "_blank");
+                            forceOpenApp("https://www.youtube.com");
                         } else if (app.includes("whatsapp")) {
-                            window.open("whatsapp://send", "_blank");
+                            forceOpenApp("https://api.whatsapp.com/send");
                         } else if (app.includes("facebook") || app.includes("fb")) {
-                            window.open("fb://", "_blank");
-                        } else if (app.includes("map")) {
-                            window.open("geo:0,0?q=maps", "_blank");
+                            forceOpenApp("https://www.facebook.com");
+                        } else if (app.includes("map") || app.includes("maps")) {
+                            forceOpenApp("https://maps.google.com");
                         } else if (app.includes("mail") || app.includes("gmail")) {
-                            window.open("googlegmail://", "_blank");
+                            forceOpenApp("https://mail.google.com");
                         } else {
-                            window.open("https://www.google.com/search?q=" + app, "_blank");
+                            forceOpenApp("https://www.google.com/search?q=" + encodeURIComponent(app));
                         }
+                        recognition.stop(); // लूप टाळण्यासाठी क्षणभर थांबवणे
                     }
-                    // 📶 सिस्टीम सेटिंग्ज शॉर्टकट
+                    // 📶 सिस्टीम सेटिंग्ज शॉर्टकट (अँड्रॉइड अधिकृत सिस्टीम प्रोटोकॉल्स)
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
-                        window.open("intent:#Intent;action=android.settings.WIFI_SETTINGS;end", "_blank");
+                        forceOpenApp("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
-                        window.open("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end", "_blank");
+                        forceOpenApp("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
                     } else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) {
-                        window.open("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
+                        forceOpenApp("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
                     } else if (cleanCmd.includes("hotspot")) {
-                        window.open("intent:#Intent;action=android.settings.TETHER_SETTINGS;end", "_blank");
+                        forceOpenApp("intent:#Intent;action=android.settings.TETHER_SETTINGS;end");
                     } else if (cleanCmd.includes("bluetooth")) {
-                        window.open("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end", "_blank");
+                        forceOpenApp("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
                     }
                 }
             };
 
             recognition.onend = function() {
-                recognition.start(); // माईक जिवंत ठेवणे
+                setTimeout(() => { recognition.start(); }, 1000); // सुरक्षित गतीने रीस्टार्ट
             };
 
             recognition.start();
         }
     </script>
     """
-    components.html(js_stable_engine, height=100)
+    components.html(js_stable_engine, height=120)
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
