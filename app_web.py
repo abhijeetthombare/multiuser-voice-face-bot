@@ -1,5 +1,3 @@
-sys.modules['cv2'] = MagicMock()
-
 import streamlit as st
 import numpy as np
 from deepface import DeepFace
@@ -75,7 +73,7 @@ if not st.session_state['authenticated']:
                     base_pil = st.session_state['user_db'][login_name]
                     login_pil = Image.open(login_cam)
                     
-                    # प्रतिमांना थेट नंपाय मॅट्रिक्समध्ये रूपांतरित करणे
+                    # प्रतिमांना नंपाय मॅट्रिक्समध्ये रूपांतरित करणे
                     img1 = np.array(base_pil)
                     img2 = np.array(login_pil)
                     
@@ -96,7 +94,7 @@ if not st.session_state['authenticated']:
                     else:
                         st.error(f"❌ चेहरा मॅच झाला नाही! (Distance Score: {round(dist, 2)})")
                 except Exception as e:
-                    st.error(f"प्रमाणीकरण एरर: {e}")
+                    st.error(f"प्रмаणीकरण एरर: {e}")
 
 # 🔓 PHASE 2: AUTOMATION CONTROL PANEL
 else:
