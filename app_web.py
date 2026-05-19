@@ -90,13 +90,13 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (ALL-IN-ONE HYBRID ENGINE)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (PATIENT WIKIPEDIA BOT)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: APP LAUNCHER + WIKIPEDIA CHATBOT ---
+    # --- 🎙️ JAVASCRIPT: THE PATIENT DOUBLE ENGINE ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center;">
         <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:10px;">🤖 Double Engine AI: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
@@ -112,9 +112,9 @@ else:
             let recognition;
             let actionExecuted = false; 
 
-            // 🌐 विकिपीडिया चॅटबॉट फंक्शन (ह्याला टच करायची गरज नाही!)
+            // 🌐 विकिपीडिया चॅटबॉट फंक्शन
             function askWikipedia(searchTerm) {
-                try { recognition.abort(); } catch(e) {} // माईक थांबवा
+                try { recognition.abort(); } catch(e) {} 
                 
                 document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🔍 Searching Wikipedia for: </span>" + searchTerm + "...";
 
@@ -130,13 +130,11 @@ else:
                     
                     document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🤖 Assistant: </span>" + answer;
                     
-                    // 🗣️ टेक्स्ट-टू-स्पीच (रोबोट बोलणार)
                     let speech = new SpeechSynthesisUtterance(answer);
                     speech.lang = 'en-IN'; 
                     speech.rate = 1.0; 
                     
                     speech.onend = function() {
-                        // बोलून संपल्यावर माईक पुन्हा आपोआप सुरू!
                         document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is listening again...</span>";
                         setTimeout(() => { try { recognition.start(); } catch(e) {} }, 500);
                     };
@@ -151,7 +149,6 @@ else:
                 });
             }
 
-            // 🎤 माईक चालू करण्याचे मुख्य फंक्शन
             function startFreshMic() {
                 if (recognition) { try { recognition.abort(); } catch(e) {} }
 
@@ -163,49 +160,57 @@ else:
                 recognition.onresult = function(event) {
                     let interimTranscript = '';
                     let finalTranscript = '';
+                    let isFinalCommand = false; // 🔥 हा ट्रॅकर सांगेल की वाक्य पूर्ण झालंय!
 
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
                         if (event.results[i].isFinal) {
                             finalTranscript += event.results[i][0].transcript;
+                            isFinalCommand = true; // युझरचं बोलून संपलं
                         } else {
                             interimTranscript += event.results[i][0].transcript;
                         }
                     }
 
-                    const query = (finalTranscript || interimTranscript).toLowerCase().trim();
-                    document.getElementById("speech-live").innerText = query;
+                    // स्क्रीनवर लाईव्ह टाईप होत राहील
+                    document.getElementById("speech-live").innerText = finalTranscript || interimTranscript;
                     
-                    if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
-                        let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
+                    // 🔥 सर्वात महत्त्वाचा बदल: जेव्हा युझर बोलून थांबेल (isFinalCommand) तेव्हाच कमांड रन करा!
+                    if (isFinalCommand) {
+                        const query = finalTranscript.toLowerCase().trim();
                         
-                        function fireIntent(intentUrl) {
-                            actionExecuted = true; 
-                            window.open(intentUrl, '_blank'); // ॲप नवीन टॅबमध्ये उघडेल
-                            document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
-                            try { recognition.abort(); } catch(e) {} 
-                        }
+                        if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
+                            let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
+                            
+                            function fireIntent(intentUrl) {
+                                actionExecuted = true; 
+                                window.open(intentUrl, '_blank'); 
+                                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
+                                try { recognition.abort(); } catch(e) {} 
+                            }
 
-                        // 📱 १. ॲप लाँचर फीचर्स (App Launcher)
-                        if (cleanCmd === "whatsapp" || cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
-                        else if (cleanCmd === "instagram" || cleanCmd.includes("insta")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
-                        else if (cleanCmd === "youtube" || cleanCmd.includes("yt")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
-                        else if (cleanCmd === "facebook" || cleanCmd.includes("fb")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
-                        else if (cleanCmd === "map" || cleanCmd.includes("maps")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
-                        else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
-                        else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) fireIntent("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
-                        else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) fireIntent("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
-                        else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
-                        
-                        // 🤖 २. विकिपीडिया चॅटबॉट (जर वरील कोणतंच ॲप नसेल, तर डायरेक्ट विकिपीडियावर शोधा!)
-                        else if (cleanCmd.length > 2) {
-                            let searchQuery = cleanCmd.replace("search", "").replace("who is", "").replace("what is", "").replace("tell me about", "").trim();
-                            askWikipedia(searchQuery);
+                            // 📱 ॲप लाँचर फीचर्स
+                            if (cleanCmd === "whatsapp" || cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
+                            else if (cleanCmd === "instagram" || cleanCmd.includes("insta")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
+                            else if (cleanCmd === "youtube" || cleanCmd.includes("yt")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
+                            else if (cleanCmd === "facebook" || cleanCmd.includes("fb")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
+                            else if (cleanCmd === "map" || cleanCmd.includes("maps")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
+                            
+                            // 📶 सिस्टीम हार्डवेअर
+                            else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
+                            else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) fireIntent("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
+                            else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) fireIntent("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
+                            else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
+                            
+                            // 🤖 विकिपीडिया चॅटबॉट (पूर्ण वाक्य ऐकल्यावरच सर्च मारेल!)
+                            else if (cleanCmd.length > 2) {
+                                let searchQuery = cleanCmd.replace("search", "").replace("who is", "").replace("what is", "").replace("tell me about", "").trim();
+                                askWikipedia(searchQuery);
+                            }
                         }
                     }
                 };
 
                 recognition.onend = function() {
-                    // जर ॲप उघडलं नसेल आणि रोबोट बोलत नसेल, तर माईक लूपमध्ये चालू ठेवा
                     if (!actionExecuted && !window.speechSynthesis.speaking) {
                         setTimeout(() => {
                             try { recognition.start(); } catch(err) {}
@@ -216,14 +221,12 @@ else:
                 try { recognition.start(); } catch(e) {}
             }
 
-            // 👆 जेव्हा तू ॲप उघडून परत येशील, तेव्हा हे बटण दिसेल
             document.addEventListener("visibilitychange", function() {
                 if (document.visibilityState === "visible" && actionExecuted === true) {
                     document.getElementById("wakeup-btn").style.display = "block";
                 }
             });
 
-            // 👆 टच केल्यावर माईक पुन्हा सुरू
             document.getElementById("wakeup-btn").addEventListener("click", function() {
                 actionExecuted = false; 
                 this.style.display = "none"; 
