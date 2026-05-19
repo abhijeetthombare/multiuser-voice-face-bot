@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Siri-Instant Auto-Refresh)")
+st.title("🤖 Next-Gen Multi-User Voice & Face Bot (Pure Hands-Free Auto-Refresh)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -90,21 +90,18 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (SIRI FAST + FORCED AUTO REFRESH)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% PURE AUTOMATIC REFRESH)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     # इनपुट बॉक्स लपवण्यासाठी CSS
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT NATIVE COUPLING (FORCED RELOAD BYPASS ENGINE) ---
+    # --- 🎙️ JAVASCRIPT NATIVE COUPLING (HANDS-FREE FORCED AUTO-RELOAD) ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
-        <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Active Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening for commands...</span></p>
+        <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Hands-Free Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening for commands...</span></p>
     </div>
-    
-    <button id="stop-mic-btn" style="width:100%; padding:12px; background-color:#d32f2f; color:white; font-size:16px; font-weight:bold; border:none; border-radius:5px; cursor:pointer; margin-bottom:15px;">🛑 Stop Microphone (5s Force Auto-Refresh)</button>
-    <a id="force-trigger" href="#" target="_blank" style="display:none;"></a>
 
     <script>
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -116,39 +113,27 @@ else:
             recognition.interimResults = false;
             recognition.lang = 'en-US';
 
-            let isPaused = false;
-
-            // ⚡ ५ सेकंदाचा कडक फोर्स रिलोड क्लिक इव्हेंट
-            document.getElementById("stop-mic-btn").addEventListener("click", function() {
-                isPaused = true;
-                recognition.stop(); // माईक जागेवर ब्लॉक करा
-                
-                let secondsLeft = 5;
-                const uiText = document.getElementById("speech-live");
-                const btn = document.getElementById("stop-mic-btn");
-                
-                btn.disabled = true;
-                btn.style.backgroundColor = "#757575";
-                
-                const interval = setInterval(() => {
-                    uiText.innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⏸️ Mic Stopped... Auto-Refreshing in " + secondsLeft + "s</span>";
-                    secondsLeft--;
-                    
-                    if (secondsLeft < 0) {
-                        clearInterval(interval);
-                        // 🔥 हा तो कडक बायपास कोड आहे जो पूर्ण पेजला बळजबरीने ऑटो-रिफ्रेश करेलच!
-                        window.parent.location.href = window.parent.location.href;
-                    }
-                }, 1000);
-            });
+            let commandTriggered = false; // डबल ट्रिगर रोखण्यासाठी
 
             function executeInstantAction(intentUrl) {
-                if (isPaused) return;
+                if (commandTriggered) return;
+                commandTriggered = true;
+                
+                recognition.stop(); // माईक थांबवा
+                
+                // १. नवीन टॅबमध्ये ॲप सुसाट उघडा
                 window.open(intentUrl, '_blank');
+                
+                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ Command Executed! Auto-Refreshing page in 1s...</span>";
+                
+                # 🔥 १ सेकंदात (1000ms) बटण न दाबता अख्खं मुख्य पेज बळजबरीने ऑटो-रिफ्रेश होईल!
+                setTimeout(() => {
+                    window.parent.location.href = window.parent.location.href;
+                }, 1000);
             }
 
             recognition.onresult = function(event) {
-                if (isPaused) return;
+                if (commandTriggered) return;
                 
                 const resultIndex = event.resultIndex;
                 const query = event.results[resultIndex][0].transcript.toLowerCase().trim();
@@ -157,7 +142,7 @@ else:
                 if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
                     let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
                     
-                    // 📱 १. मूळ अँड्रॉइड ॲप्स
+                    // 📱 मूळ अँड्रॉइड ॲप्स ट्रिगर्स
                     if (cleanCmd.includes("whatsapp")) {
                         executeInstantAction("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
                     } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
@@ -172,7 +157,7 @@ else:
                         executeInstantAction("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end");
                     }
                     
-                    // 📶 २. सिस्टीम हार्डवेअर
+                    // 📶 सिस्टीम हार्डवेअर सेटिंग्ज
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
                         executeInstantAction("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
@@ -188,10 +173,8 @@ else:
             };
 
             recognition.onend = function() {
-                if (!isPaused) {
-                    setTimeout(() => {
-                        try { recognition.start(); } catch(err) {}
-                    }, 1);
+                if (!commandTriggered) {
+                    try { recognition.start(); } catch(err) {}
                 }
             };
 
@@ -199,7 +182,7 @@ else:
         }
     </script>
     """
-    components.html(js_stable_engine, height=240)
+    components.html(js_stable_engine, height=130) # क्लीन लूकसाठी हाईट कमी केली
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
