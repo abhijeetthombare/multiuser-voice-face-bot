@@ -1,0 +1,7 @@
+streamlit
+opencv-python-headless
+deepface
+speechrecognition
+tf-keras
+streamlit-mic-recorder
+numpy
