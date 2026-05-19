@@ -28,6 +28,8 @@ if 'last_command' not in st.session_state:
     st.session_state['last_command'] = "None"
 if 'redirect_url' not in st.session_state:
     st.session_state['redirect_url'] = None
+if 'live_speech' not in st.session_state:
+    st.session_state['live_speech'] = "काहीही ऐकले नाही (Waiting for voice...)"
 
 # --- ३. JAVASCRIPT DIRECT REDIRECTION ENGINE ---
 if st.session_state['redirect_url']:
@@ -84,15 +86,12 @@ if not st.session_state['authenticated']:
                         identified_user = None
                         best_score = 1.0
                         
-                        # Fix kelela accurate face recognition loop
                         for name, base_img in st.session_state['user_db'].items():
                             base_resized = base_img.resize((300, 300))
-                            
                             diff = ImageChops.difference(base_resized, login_resized)
                             stat = ImageStat.Stat(diff)
                             diff_ratio = sum(stat.mean) / (3 * 255)
                             
-                            # Threshhold thoda relax kela ahe (0.45) jyamule mobile cam var ekdam perfect match hoil
                             if diff_ratio < best_score:
                                 best_score = diff_ratio
                                 if diff_ratio < 0.45: 
@@ -106,7 +105,7 @@ if not st.session_state['authenticated']:
                             time.sleep(0.5)
                             st.rerun()
                         else:
-                            st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)} - Requirements: < 0.45)")
+                            st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})")
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
@@ -114,7 +113,7 @@ if not st.session_state['authenticated']:
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
-    # Hide the text input box using custom CSS
+    # लपवलेला इनपुट बॉक्स पूर्णपणे अदृश्य करण्यासाठी CSS
     st.markdown(
         """
         <style>
@@ -126,10 +125,7 @@ else:
         unsafe_allow_html=True
     )
 
-    if 'hidden_voice_query' not in st.session_state:
-        st.session_state['hidden_voice_query'] = ""
-
-    # --- 🎙️ PURE JAVASCRIPT BACKGROUND LIVE STT ENGINE ---
+    # --- 🎙️ PURE JAVASCRIPT BACKGROUND LIVE STT ENGINE (LOOP FIXED) ---
     js_speech_engine = """
     <script>
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -138,13 +134,15 @@ else:
         } else {
             const recognition = new SpeechRecognition();
             recognition.continuous = true;
-            recognition.interimResults = false;
+            recognition.interimResults = true; // लाईव्ह बोलताना शब्द दिसण्यासाठी True केले
             recognition.lang = 'en-US';
 
             recognition.onresult = function(event) {
                 const current = event.resultIndex;
                 const transcript = event.results[current][0].transcript;
+                const isFinal = event.results[current].isFinal;
                 
+                // स्ट्रीमलिटच्या ब्रिज बॉक्समध्ये डेटा पाठवणे
                 window.parent.postMessage({
                     type: 'streamlit:set_widget_value',
                     from: 'js_voice_bridge',
@@ -153,7 +151,7 @@ else:
             };
 
             recognition.onend = function() {
-                recognition.start();
+                recognition.start(); // कंटिन्यूअस लूप सुरू ठेवणे
             };
 
             recognition.start();
@@ -162,23 +160,31 @@ else:
     """
     components.html(js_speech_engine, height=0, width=0)
     
+    # व्हॉईस डेटा ब्रिज (हा मागच्या वेळी CSS मुळे लपवला होता आणि लूप करत होता)
     heard_text = st.text_input("", key="js_voice_bridge", label_visibility="collapsed")
     
-    if heard_text and heard_text != st.session_state['hidden_voice_query']:
-        st.session_state['hidden_voice_query'] = heard_text
+    # जर माईकने नवीन आवाज ऐकला, तर तो थेट स्क्रीनवर दाखवणे
+    if heard_text and heard_text != st.session_state['live_speech']:
+        st.session_state['live_speech'] = heard_text
         query = heard_text.lower().strip()
         
+        # जर कमांडमध्ये 'python' असेल तरच त्याला अंतिम एक्झिक्युशनसाठी पाठवणे
         if "python" in query or "paithen" in query or "py" in query:
             st.session_state['last_command'] = query
 
-    st.info(f"💾 **Last Detected Live Voice Command:** {st.session_state['last_command']}")
+    # ✨ इकडे बघ भावा! तू जे काही बOptionशेल ते इथे लाइव्ह दिसणार!
+    st.info(f"🗣️ **सिस्टीमने ऐकलेला थेट आवाज (Live Speech):** `{st.session_state['live_speech']}`")
+    st.success(f"💾 **लास्ट एक्झिक्युटेड कमांड:** `{st.session_state['last_command']}`")
     st.markdown("🌐 **Status:** `माईक ऑन आहे. थेट बोला (उदा: 'Python open youtube')`")
 
-    # --- ⚡ COMMAND EXECUTION ENGINE ---
+    # --- ⚡ COMMAND EXECUTION ENGINE (NO-LOOP FIX) ---
     cmd = st.session_state['last_command']
     if cmd != "None":
         clean_command = cmd.replace("python", "").replace("paithen", "").replace("py", "").strip()
+        
+        # सर्वात आधी स्टेट्स रीसेट करणे जेणेकरून लूप थांबेल
         st.session_state['last_command'] = "None" 
+        st.session_state['live_speech'] = "काहीही ऐकले नाही (Waiting for voice...)"
         
         # --- १. मोबाईल सिस्टीम सेटिंग्ज ---
         if any(x in clean_command for x in ['wifi', 'wi-fi', 'data', 'internet', 'location', 'gps', 'hotspot', 'tethering', 'bluetooth']):
@@ -218,5 +224,5 @@ else:
         st.session_state['authenticated'] = False
         st.session_state['current_user'] = None
         st.session_state['last_command'] = "None"
-        st.session_state['hidden_voice_query'] = ""
+        st.session_state['live_speech'] = "काहीही ऐकले नाही (Waiting for voice...)"
         st.rerun()
