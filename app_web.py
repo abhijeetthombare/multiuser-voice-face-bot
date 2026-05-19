@@ -1,12 +1,17 @@
+# --- SYSTEM OVERRIDE FOR LINUX DRIVERS ---
+import sys
+import mock
+sys.modules['cv2'] = mock.MagicMock()
+# -----------------------------------------
+
 import streamlit as st
-import cv2
 import numpy as np
 from deepface import DeepFace
 import io
 import os
 import time
 import webbrowser
-import requests  # विकिपीडिया API साठी
+import requests
 
 # --- १. PAGE SET-UP & THEME ---
 st.set_page_config(
