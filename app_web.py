@@ -2,11 +2,11 @@ import streamlit as st
 import cv2
 import numpy as np
 from deepface import DeepFace
-import speech_recognition as sr
 import io
 import os
 import time
 import webbrowser
+import requests  # विकिपीडिया API साठी
 
 # --- १. PAGE SET-UP & THEME ---
 st.set_page_config(
@@ -46,7 +46,7 @@ if not st.session_state['authenticated']:
     with tab1:
         st.subheader("नवीन युझर खाते तयार करा")
         reg_name = st.text_input("तुमचे नाव टाका (Enter Your Name):").strip()
-        reg_cam = st.camera_input("नोंदणीसाठी एक सरळ चेहरा असलेला फोटो काढा")
+        reg_cam = st.camera_input("नोंदणीसाठी एक सरळ चेहरा असलेला फोटो काढा", key="reg_camera")
         
         if st.button("Register Face Now", use_container_width=True):
             if reg_name and reg_cam:
@@ -55,7 +55,7 @@ if not st.session_state['authenticated']:
                     f.write(reg_cam.getbuffer())
                 
                 st.session_state['user_db'][reg_name] = file_path
-                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी यशस्वी झाली आहे! आता लॉगिन टॅबमध्ये जा.")
+                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी यशस्वी झाली आहे! अबी भाऊ, आता लॉगिन टॅबमध्ये जा.")
             else:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
@@ -67,7 +67,7 @@ if not st.session_state['authenticated']:
             st.warning("⚠️ आधी रजिस्ट्रेशन टॅबमध्ये जाऊन किमान एका युझरची नोंदणी करा.")
         else:
             login_name = st.selectbox("तुमचे नाव निवडा (Select Your Name)", list(st.session_state['user_db'].keys()))
-            login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फ्रेश फोटो काढा")
+            login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फ्रेश फोटो काढा", key="login_camera")
             
             if login_cam and login_name:
                 with open("temp_login.jpg", "wb") as f:
@@ -101,22 +101,22 @@ else:
     st.info(f"💾 **Last Detected Command:** {st.session_state['last_command']}")
     
     st.markdown("### 🎙️ Web Voice Automation Command Center")
-    st.write("खालील बटनावर क्लिक करा, बोला आणि पुन्हा बटन दाबून स्टॉप करा (उदा. 'Python open instagram')")
+    st.write("मोबाईलवर वापरताना माईल परमिशन **Allow** करा, बोला आणि स्टॉप करा.")
     
+    # 🛠️ मोबाईल माईक फिक्स: आपण फिक्स पॅरामीटर्ससह स्पीच रेकॉर्डर लोड केला आहे
     from streamlit_mic_recorder import speech_to_text
     
     text_received = speech_to_text(
-        start_prompt="🎙️ Start Speaking Command",
-        stop_prompt="🛑 Stop & Process",
+        start_prompt="🎙️ Start Speaking Command (बोलणे सुरू करा)",
+        stop_prompt="🛑 Stop & Process (कमांड रन करा)",
         language='en-US', 
-        key='web_voice_core',
+        key='web_voice_core_fixed',
         use_container_width=True
     )
     
     if text_received:
-        query = text_received.lower()
+        query = text_received.lower().strip()
         st.write(f"🗣️ **सिस्टीमने ऐकलेला शब्द:** `{query}`")
-        print(f"\n[LIVE DEBUG] गुगलने ऐकलेला शब्द: '{query}'\n")
         
         if "python" in query or "paithen" in query or "py" in query:
             clean_command = query.replace("python", "").replace("paithen", "").replace("py", "").strip()
@@ -124,11 +124,29 @@ else:
             
             st.success(f"⚙️ Action Triggered: `{clean_command}`")
             
-            # --- 🚀 युनिव्हर्सल अ‍ॅप्स ओपनिंग मॅजिक्स (मोबाईल + लॅपटॉप दोन्हीसाठी) ---
-            if 'open' in clean_command or 'start' in clean_command:
+            # --- 📚 १. विकिपीडिया सर्च मॅजिक्स (Special Feature) ---
+            if 'wikipedia' in clean_command or 'wiki' in clean_command or 'tell me about' in clean_command:
+                # सर्च क्युरी स्वच्छ करणे
+                search_term = clean_command.replace("wikipedia", "").replace("wiki", "").replace("tell me about", "").strip()
+                st.info(f"🔍 Searching Wikipedia for: `{search_term}`...")
+                
+                try:
+                    wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{search_term.replace(' ', '_')}"
+                    response = requests.get(wiki_url, headers={"User-Agent": "UniversalAIBot/1.0"}).json()
+                    
+                    if "extract" in response:
+                        st.markdown(f"### 📖 Wikipedia Summary for **{search_term.title()}**:")
+                        st.info(response['extract'])
+                    else:
+                        st.warning("❌ विकिपीडियावर या विषयाची सोपी माहिती सापडली नाही. गुगल सर्च उघडत आहे...")
+                        webbrowser.open(f"https://www.google.com/search?q={search_term}")
+                except Exception as wiki_err:
+                    st.error(f"विकिपीडिया एरर: {wiki_err}")
+            
+            # --- 🚀 २. युनिव्हर्सल अ‍ॅप्स ओपनिंग मॅजिक्स ---
+            elif 'open' in clean_command or 'start' in clean_command:
                 app = clean_command.replace("open ", "").replace("start ", "").strip()
                 
-                # सोशल मीडिया आणि मेसेंजर्स
                 if 'instagram' in app or 'insta' in app:
                     webbrowser.open("https://www.instagram.com")
                     st.info("Opening Instagram...")
@@ -144,8 +162,6 @@ else:
                 elif 'linkedin' in app:
                     webbrowser.open("https://www.linkedin.com")
                     st.info("Opening LinkedIn...")
-                
-                # गुगल आणि व्हिडिओ टूल्स
                 elif 'youtube' in app or 'yt' in app:
                     webbrowser.open("https://www.youtube.com")
                     st.info("Opening YouTube...")
@@ -158,22 +174,21 @@ else:
                 elif 'map' in app or 'maps' in app:
                     webbrowser.open("https://maps.google.com")
                     st.info("Opening Google Maps...")
-                
-                # कोडिंग आणि एज्युकेशन (MIT MCA स्पेशल)
                 elif 'github' in app:
                     webbrowser.open("https://github.com")
                     st.info("Opening GitHub...")
                 elif 'chatgpt' in app or 'gpt' in app:
                     webbrowser.open("https://chat.openai.com")
                     st.info("Opening ChatGPT...")
-                
-                # 🔍 ऑटो-सर्च (स्मार्ट बॅकअप): जर वरील यादीत अ‍ॅप नसेल, तर ते डायरेक्ट गुगलवर सर्च मारेल!
                 else:
                     webbrowser.open(f"https://www.google.com/search?q={app}")
                     st.success(f"Searching for '{app}' on Google...")
-                    
+            else:
+                # जर ओपन किंवा विकी नसेल, तर डायरेक्ट गुगल सर्च मारेल
+                webbrowser.open(f"https://www.google.com/search?q={clean_command}")
+                st.success(f"Searching for '{clean_command}' on Google...")
         else:
-            st.warning("⚠️ कमांडमध्ये 'Python' कीवर्ड सापडला नाही.")
+            st.warning("⚠️ कमांडमध्ये 'Python' कीवर्ड सापडला नाही. (उदा. बोला: 'Python open youtube')")
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
