@@ -90,11 +90,11 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% STABLE FRONTEND VOICE)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% WORKING FRONTEND ENGINE)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
-    # रिकामा टेक्स्ट बॉक्स पूर्णपणे अदृश्य करण्यासाठी CSS
+    # जुना रिकामा टेक्स्ट बॉक्स लपवण्यासाठी CSS
     st.markdown(
         """
         <style>
@@ -106,11 +106,13 @@ else:
         unsafe_allow_html=True
     )
 
-    # --- 🎙️ JAVASCRIPT ULTRA STABLE VOICE INTERFACE (DIRECT DEEP LINKS) ---
+    # --- 🎙️ JAVASCRIPT POPUP-BLOCKER BYPASS ENGINE (ULTIMATE WORK FIX) ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
         <p style="margin:0; font-weight:bold; color:#1f77b4;">🗣️ Live Speech (तुमचा आवाज): <span id="speech-live" style="color:#333; font-weight:normal;">Waiting for voice...</span></p>
     </div>
+    
+    <a id="force-trigger" href="#" target="_blank" style="display:none; padding:10px; background-color:#1f77b4; color:white; text-align:center; border-radius:5px; text-decoration:none; font-weight:bold; margin-top:10px;">⚡ Launching Native App...</a>
 
     <script>
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -122,14 +124,24 @@ else:
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
-            // 🚀 मोबाईल अ‍ॅप्स आणि सिस्टीम शॉर्टकट उघडणारे फंक्शन
-            function launchDirectIntent(targetUrl) {
-                recognition.stop(); // ब्राउझर सिक्युरिटी ब्लॉक टाळण्यासाठी तात्पुरते स्टॉप
-                window.location.href = targetUrl; // डायरेक्ट लोकेशन चेंज
-
+            // 👑 क्रोम सुरक्षा तोडणारं अधिकृत ऑटो-क्लिक इंजिन फंक्शन
+            function executeAction(intentUrl) {
+                recognition.stop(); // माईक तात्पुरता थांबवा
+                
+                const triggerBtn = document.getElementById("force-trigger");
+                triggerBtn.href = intentUrl;
+                triggerBtn.style.display = "block"; // स्क्रीनवर निळं बटण दिसेल
+                
+                // ⚡ जादुई ऑटो-क्लिक इव्हेंट सिम्युलेशन (Chrome Security Bypass!)
                 setTimeout(() => {
+                    triggerBtn.click();
+                }, 100);
+
+                // २ सेकंदात अ‍ॅप उघडून माईक पुन्हा continuous मोडवर येईल
+                setTimeout(() => {
+                    triggerBtn.style.display = "none";
                     try { recognition.start(); } catch(err) {}
-                }, 1500);
+                }, 2000);
             }
 
             recognition.onresult = function(event) {
@@ -149,36 +161,35 @@ else:
                 
                 const query = currentText.toLowerCase().trim();
                 
-                // 🔐 'Python' हा कीवर्ड येताच पुढे जे नाव असेल ते डायरेक्ट ओपन होईल (No 'Open' word dependency!)
                 if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
                     let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
                     
-                    // 🔥 १. मोबाईल ओरिजिनल ॲप्स डायरेक्ट मॅचिंग
+                    // 📱 १. मोबाईल ओरिजिनल ॲप्स थेट इंटेंट्स (पॉपअप ब्लॉकर बायपास)
                     if (cleanCmd.includes("whatsapp")) {
-                        launchDirectIntent("whatsapp://send");
+                        executeAction("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
                     } else if (cleanCmd.includes("instagram") || cleanCmd.includes("insta")) {
-                        launchDirectIntent("instagram://app");
+                        executeAction("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
                     } else if (cleanCmd.includes("youtube") || cleanCmd.includes("yt")) {
-                        launchDirectIntent("youtube://");
+                        executeAction("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
                     } else if (cleanCmd.includes("facebook") || cleanCmd.includes("fb")) {
-                        launchDirectIntent("fb://");
+                        executeAction("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
                     } else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) {
-                        launchDirectIntent("geo:0,0?q=maps");
+                        executeAction("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
                     } else if (cleanCmd.includes("mail") || cleanCmd.includes("gmail")) {
-                        launchDirectIntent("googlegmail://");
+                        executeAction("intent://mail.google.com/#Intent;package=com.google.android.gm;scheme=https;end");
                     }
                     
-                    // 📶 २. मोबाईल हार्डवेअर सिस्टीम सेटिंग्ज मॅचिंग
+                    // 📶 २. मोबाईल हार्डवेअर सिस्टीम थेट सेटिंग्ज
                     else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) {
-                        launchDirectIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
+                        executeAction("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                     } else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) {
-                        launchDirectIntent("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
+                        executeAction("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
                     } else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) {
-                        launchDirectIntent("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
+                        executeAction("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
                     } else if (cleanCmd.includes("hotspot")) {
-                        launchDirectIntent("intent:#Intent;action=android.settings.TETHER_SETTINGS;end");
+                        executeAction("intent:#Intent;action=android.settings.TETHER_SETTINGS;end");
                     } else if (cleanCmd.includes("bluetooth")) {
-                        launchDirectIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
+                        executeAction("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
                     }
                 }
             };
@@ -193,7 +204,7 @@ else:
         }
     </script>
     """
-    components.html(js_stable_engine, height=120)
+    components.html(js_stable_engine, height=180)
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
