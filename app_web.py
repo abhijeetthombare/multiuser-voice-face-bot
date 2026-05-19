@@ -1,12 +1,11 @@
 import streamlit as st
 import numpy as np
-from deepface import DeepFace
 import io
 import os
 import time
 import webbrowser
 import requests
-from PIL import Image
+from PIL import Image, ImageChops, ImageStat
 
 # --- १. PAGE SET-UP & THEME ---
 st.set_page_config(
@@ -50,9 +49,10 @@ if not st.session_state['authenticated']:
         
         if st.button("Register Face Now", use_container_width=True):
             if reg_name and reg_cam:
-                reg_image = Image.open(reg_cam)
+                # फोटो मेमरीमध्ये सेव्ह करणे
+                reg_image = Image.open(reg_cam).convert('RGB')
                 st.session_state['user_db'][reg_name] = reg_image
-                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी यशस्वी झाली आहे! आता लॉगिन टॅबमध्ये जा.")
+                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी यशस्वी झाली आहे! अबी भाऊ, आता लॉगिन टॅबमध्ये जा.")
             else:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
@@ -67,36 +67,35 @@ if not st.session_state['authenticated']:
             login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फ्रेश फोटो काढा", key="login_camera")
             
             if login_cam and login_name:
-                st.info("🔄 Biometric Facenet Analysis in progress...")
+                st.info("🔄 Biometric Analysis in progress...")
                 
                 try:
-                    base_pil = st.session_state['user_db'][login_name]
-                    login_pil = Image.open(login_cam)
+                    # १. दोन्ही फोटो लोड करणे
+                    base_img = st.session_state['user_db'][login_name]
+                    login_img = Image.open(login_cam).convert('RGB')
                     
-                    # प्रतिमांना नंपाय मॅट्रिक्समध्ये रूपांतरित करणे
-                    img1 = np.array(base_pil)
-                    img2 = np.array(login_pil)
+                    # २. मॅचिंगसाठी दोन्ही फोटोंची साईज समान करणे
+                    base_resized = base_img.resize((300, 300))
+                    login_resized = login_img.resize((300, 300))
                     
-                    # डीपफेस व्हेरिफिकेशन
-                    result = DeepFace.verify(img1_path = img1, 
-                                             img2_path = img2,
-                                             model_name = "Facenet",
-                                             distance_metric = "cosine", 
-                                             enforce_detection = False)
-                    dist = result['distance']
+                    # ३. पायथॉन इमेज मॅचिंग अल्गोरिदम (पिक्सेल मॅपिंग डिफरन्स)
+                    diff = ImageChops.difference(base_resized, login_resized)
+                    stat = ImageStat.Stat(diff)
+                    diff_ratio = sum(stat.mean) / (3 * 255)  # ० ते १ मधील फरक
                     
-                    if dist < 0.65:
+                    # ४. मॅचिंग स्कोअर ठरवणे (०.३५ पेक्षा कमी फरक म्हणजेच चेहरा मॅच झाला)
+                    if diff_ratio < 0.35:
                         st.session_state['authenticated'] = True
                         st.session_state['current_user'] = login_name
                         st.success(f"🔓 स्वागत आहे {login_name}! सिस्टीम अनलॉक झाली.")
                         time.sleep(1.0)
                         st.rerun()
                     else:
-                        st.error(f"❌ चेहरा मॅच झाला नाही! (Distance Score: {round(dist, 2)})")
+                        st.error(f"❌ चेहरा मॅच झाला नाही! (Difference Score: {round(diff_ratio, 2)})")
                 except Exception as e:
-                    st.error(f"प्रмаणीकरण एरर: {e}")
+                    st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (UNIVERSAL APP COMMANDS)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     st.info(f"💾 **Last Detected Command:** {st.session_state['last_command']}")
@@ -122,7 +121,7 @@ else:
             st.session_state['last_command'] = clean_command
             st.success(f"⚙️ Action Triggered: `{clean_command}`")
             
-            # विकिपीडिया सर्च
+            # --- विकिपीडिया सर्च ---
             if 'wikipedia' in clean_command or 'wiki' in clean_command or 'tell me about' in clean_command:
                 search_term = clean_command.replace("wikipedia", "").replace("wiki", "").replace("tell me about", "").strip()
                 try:
@@ -136,7 +135,7 @@ else:
                 except Exception as wiki_err:
                     st.error(f"विकिपीडिया एरर: {wiki_err}")
             
-            # अ‍ॅप्स ओपनिंग
+            # --- अ‍ॅप्स ओपनिंग ---
             elif 'open' in clean_command or 'start' in clean_command:
                 app = clean_command.replace("open ", "").replace("start ", "").strip()
                 if 'instagram' in app or 'insta' in app:
