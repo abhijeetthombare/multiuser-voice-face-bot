@@ -1,7 +1,7 @@
 # --- SYSTEM OVERRIDE FOR LINUX DRIVERS ---
 import sys
-import mock
-sys.modules['cv2'] = mock.MagicMock()
+from unittest.mock import MagicMock
+sys.modules['cv2'] = MagicMock()
 # -----------------------------------------
 
 import streamlit as st
