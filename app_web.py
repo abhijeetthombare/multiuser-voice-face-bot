@@ -90,18 +90,20 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (100% NON-STOP VOICE)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (WITH TIMED MIC STOP BUTTON)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     # इनपुट बॉक्स लपवण्यासाठी CSS
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT NON-STOP VOICE INTERFACE (LOOP FIXED) ---
+    # --- 🎙️ JAVASCRIPT NON-STOP VOICE INTERFACE + 5 SEC PAUSE ENGINE ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
         <p style="margin:0; font-weight:bold; color:#1f77b4;">🗣️ Live Speech (तुमचा आवाज): <span id="speech-live" style="color:#333; font-weight:normal;">Waiting for voice...</span></p>
     </div>
+    
+    <button id="stop-mic-btn" style="width:100%; padding:12px; background-color:#d32f2f; color:white; font-size:16px; font-weight:bold; border:none; border-radius:5px; cursor:pointer; margin-bottom:15px; transition: 0.3s;">🛑 Stop Microphone (5 Seconds Pause)</button>
     
     <a id="force-trigger" href="#" target="_blank" style="display:none; padding:10px; background-color:#1f77b4; color:white; text-align:center; border-radius:5px; text-decoration:none; font-weight:bold; margin-top:10px;">⚡ Launching Native App...</a>
 
@@ -115,25 +117,48 @@ else:
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
-            // एकच कमांड पुन्हा पुन्हा एक्झिक्युट होऊ नये म्हणून २ सेकंदाचा कुलडाऊन लॉक
             let lastExecutionTime = 0;
+            let isPaused = false; // माईक लॉक ट्रॅक करण्यासाठी व्हेरिएबल
+
+            // 🛑 स्टॉप बटण क्लिक इव्हेंट
+            document.getElementById("stop-mic-btn").addEventListener("click", function() {
+                isPaused = true;
+                recognition.stop(); // माईक तात्काळ थांबवा
+                
+                let secondsLeft = 5;
+                const uiText = document.getElementById("speech-live");
+                const btn = document.getElementById("stop-mic-btn");
+                
+                btn.disabled = true;
+                btn.style.backgroundColor = "#757575";
+                
+                // ५ सेकंदाचा लाईव्ह काउंटडाऊन टाइमर चालू करा
+                const interval = setInterval(() => {
+                    uiText.innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⏸️ Mic Paused... Restarting in " + secondsLeft + "s</span>";
+                    secondsLeft--;
+                    
+                    if (secondsLeft < 0) {
+                        clearInterval(interval);
+                        // ५ सेकंद संपताच पूर्ण पेज रीफ्रेश करून माईक आपोआप ऑन करणे
+                        window.parent.location.reload();
+                    }
+                }, 1000);
+            });
 
             function executeAction(intentUrl) {
-                // 🛑 माईक अजिबात बंद होणार नाही (recognition.stop() काढून टाकलाय!)
+                if (isPaused) return; // जर पाझ असेल तर कोणतीही कमांड धावणार नाही
+                
                 const triggerBtn = document.getElementById("force-trigger");
                 triggerBtn.href = intentUrl;
                 triggerBtn.style.display = "block";
                 
-                setTimeout(() => {
-                    triggerBtn.click();
-                }, 500);
-
-                setTimeout(() => {
-                    triggerBtn.style.display = "none";
-                }, 2000);
+                setTimeout(() => { triggerBtn.click(); }, 500);
+                setTimeout(() => { triggerBtn.style.display = "none"; }, 2000);
             }
 
             recognition.onresult = function(event) {
+                if (isPaused) return; // पाझ असेल तर आवाज ऐकू नका
+
                 let interimTranscript = '';
                 let finalTranscript = '';
 
@@ -151,7 +176,6 @@ else:
                 const query = currentText.toLowerCase().trim();
                 const now = Date.now();
                 
-                // जर आवाजात 'python' असेल आणि मागच्या कमांडला २ सेकंद झाले असतील तरच ट्रिगर होणार
                 if ((query.includes("python") || query.includes("paithen") || query.includes("py")) && (now - lastExecutionTime > 2000)) {
                     let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
                     
@@ -196,16 +220,18 @@ else:
                 }
             };
 
-            // माईक बॅकएंडला विना-स्टॉप चोवीस तास जिवंत राहील
             recognition.onend = function() {
-                try { recognition.start(); } catch(err) {}
+                // जर युझरने स्वतःहून बटण दाबून पाझ केलं नसेल, तरच माईक continuous सुरू राहील
+                if (!isPaused) {
+                    try { recognition.start(); } catch(err) {}
+                }
             };
 
             recognition.start();
         }
     </script>
     """
-    components.html(js_stable_engine, height=180)
+    components.html(js_stable_engine, height=240) # बटणासाठी हाईट वाढवली
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
