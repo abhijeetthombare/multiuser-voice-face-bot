@@ -50,10 +50,10 @@ if not st.session_state['authenticated']:
         
         if st.button("Register Face Now", use_container_width=True):
             if reg_name and reg_cam:
-                # PIL Image ऑब्जेक्ट बनवून सेशन स्टेटमध्ये थेट सेव्ह करणे (इमेज लॉस होणार नाही)
+                # थेट PIL द्वारे इमेज मेमरीमध्ये सेव्ह करणे (OpenCV वरून होणारा क्रॅश टाळण्यासाठी)
                 reg_image = Image.open(reg_cam)
                 st.session_state['user_db'][reg_name] = reg_image
-                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी यशस्वी झाली आहे! आता लॉगिन टॅबमध्ये जा.")
+                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी यशस्वी झाली आहे! अबी भाऊ, आता लॉगिन टॅबमध्ये जा.")
             else:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
@@ -71,15 +71,15 @@ if not st.session_state['authenticated']:
                 st.info("🔄 Biometric Facenet Analysis in progress...")
                 
                 try:
-                    # १. बेस फोटो आणि फ्रेश फोटो PIL फॉरमॅटमध्ये मिळवणे
+                    # १. बेस फोटो आणि फ्रेश फोटो मेमरीमधून लोड करणे
                     base_pil = st.session_state['user_db'][login_name]
                     login_pil = Image.open(login_cam)
                     
-                    # २. त्यांना numpy array मध्ये कन्वर्शन करणे (OpenCV ची गरजच नाही)
+                    # २. प्रतिमांना थेट नंपाय मॅट्रिक्स (Numpy Array) मध्ये रूपांतरित करणे
                     img1 = np.array(base_pil)
                     img2 = np.array(login_pil)
                     
-                    # ३. डीपफेस व्हेरिफिकेशन (थेट नंपाय अरे पास करणे)
+                    # ३. डीपफेस व्हेरिफिकेशन (थेट अरे पास केल्यामुळे img1_path एरर येणारच नाही)
                     result = DeepFace.verify(img1_path = img1, 
                                              img2_path = img2,
                                              model_name = "Facenet",
@@ -104,7 +104,7 @@ else:
     st.info(f"💾 **Last Detected Command:** {st.session_state['last_command']}")
     
     st.markdown("### 🎙️ Web Voice Automation Command Center")
-    st.write("मोबाईलवर वापरताना माईल परमिशन Allow करा, बोला आणि स्टॉप करा.")
+    st.write("मोबाईलवर वापरताना माईल परमिशन **Allow** करा, बोला आणि स्टॉप करा.")
     
     from streamlit_mic_recorder import speech_to_text
     
@@ -126,7 +126,7 @@ else:
             
             st.success(f"⚙️ Action Triggered: `{clean_command}`")
             
-            # --- विकिपीडिया सर्च ---
+            # --- 📚 १. विकिपीडिया सर्च मॅजिक्स ---
             if 'wikipedia' in clean_command or 'wiki' in clean_command or 'tell me about' in clean_command:
                 search_term = clean_command.replace("wikipedia", "").replace("wiki", "").replace("tell me about", "").strip()
                 st.info(f"🔍 Searching Wikipedia for: `{search_term}`...")
@@ -139,18 +139,24 @@ else:
                         st.markdown(f"### 📖 Wikipedia Summary for **{search_term.title()}**:")
                         st.info(response['extract'])
                     else:
-                        st.warning("❌ विकिपीडियावर माहिती सापडली नाही. गुगल सर्च उघडत आहे...")
+                        st.warning("❌ विकिपीडियावर या विषयाची सोपी माहिती सापडली नाही. गुगल सर्च उघडत आहे...")
                         webbrowser.open(f"https://www.google.com/search?q={search_term}")
                 except Exception as wiki_err:
                     st.error(f"विकिपीडिया एरर: {wiki_err}")
             
-            # --- युनिव्हर्सल अ‍ॅप्स ओपनिंग मॅजिक्स ---
+            # --- 🚀 २. युनिव्हर्सल अ‍ॅप्स ओपनिंग मॅजिक्स ---
             elif 'open' in clean_command or 'start' in clean_command:
                 app = clean_command.replace("open ", "").replace("start ", "").strip()
                 
                 if 'instagram' in app or 'insta' in app:
                     webbrowser.open("https://www.instagram.com")
                     st.info("Opening Instagram...")
+                elif 'facebook' in app or 'fb' in app:
+                    webbrowser.open("https://www.facebook.com")
+                    st.info("Opening Facebook...")
+                elif 'whatsapp' in app:
+                    webbrowser.open("https://web.whatsapp.com")
+                    st.info("Opening WhatsApp...")
                 elif 'youtube' in app or 'yt' in app:
                     webbrowser.open("https://www.youtube.com")
                     st.info("Opening YouTube...")
