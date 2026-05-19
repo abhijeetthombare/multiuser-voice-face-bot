@@ -1,9 +1,9 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import numpy as np
 import io
 import os
 import time
-import webbrowser
 import requests
 from PIL import Image, ImageChops, ImageStat
 
@@ -26,8 +26,21 @@ if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
 if 'last_command' not in st.session_state:
     st.session_state['last_command'] = "None"
+if 'redirect_url' not in st.session_state:
+    st.session_state['redirect_url'] = None
 
-# --- ३. MAIN UI RENDERING ---
+# --- ३. JAVASCRIPT DIRECT REDIRECTION ENGINE ---
+# Ha code mobile vrun direct redirection open karto, kontahi server cha locha hot nahi
+if st.session_state['redirect_url']:
+    js_code = f"""
+    <script>
+        window.open("{st.session_state['redirect_url']}", "_blank");
+    </script>
+    """
+    components.html(js_code, height=0, width=0)
+    st.session_state['redirect_url'] = None # Execute zalyavar clear karne
+
+# --- ४. MAIN UI RENDERING ---
 col1, col2 = st.columns(2)
 with col1:
     status_text = f"🔓 UNLOCKED ({st.session_state['current_user']})" if st.session_state['authenticated'] else "LOCKED 🔒"
@@ -37,11 +50,11 @@ with col2:
 
 st.write("---")
 
-# --- ४. REGISTRATION & LOGIN TABS ---
+# --- ५. REGISTRATION & LOGIN TABS ---
 if not st.session_state['authenticated']:
     tab1, tab2 = st.tabs(["📝 New User Registration", "🔑 Biometric Login"])
     
-    # 📝 टॅब १: नवीन युझर रजिस्ट्रेशन
+    # 📝 Tab 1: New User Registration
     with tab1:
         st.subheader("नवीन युझर खाते तयार करा")
         reg_name = st.text_input("तुमचे नाव टाका (Enter Your Name):").strip()
@@ -55,7 +68,7 @@ if not st.session_state['authenticated']:
             else:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
-    # 🔑 टॅब २: बायोमेट्रिक लॉगिन
+    # 🔑 Tab 2: Biometric Login (NO BUTTON CLICK NEEDED - COMPLETELY AUTOMATIC)
     with tab2:
         st.subheader("चेहरा दाखवून सिस्टीम अनलॉक करा")
         
@@ -63,40 +76,39 @@ if not st.session_state['authenticated']:
             st.warning("⚠️ आधी रजिस्ट्रेशन टॅबमध्ये जाऊन किमान एका युझरची नोंदणी करा.")
         else:
             login_name = st.selectbox("तुमचे नाव निवडा (Select Your Name)", list(st.session_state['user_db'].keys()))
-            login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फ्रेश फोटो काढा", key="login_camera")
+            login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फोटो काढा (कॅमेरा समोर या)", key="login_camera")
             
-            if login_cam and login_name:
-                st.info("🔄 Biometric Analysis in progress...")
-                
-                try:
-                    base_img = st.session_state['user_db'][login_name]
-                    login_img = Image.open(login_cam).convert('RGB')
-                    
-                    base_resized = base_img.resize((300, 300))
-                    login_resized = login_img.resize((300, 300))
-                    
-                    diff = ImageChops.difference(base_resized, login_resized)
-                    stat = ImageStat.Stat(diff)
-                    diff_ratio = sum(stat.mean) / (3 * 255)
-                    
-                    if diff_ratio < 0.35:
-                        st.session_state['authenticated'] = True
-                        st.session_state['current_user'] = login_name
-                        st.success(f"🔓 स्वागत आहे {login_name}! सिस्टीम अनलॉक झाली.")
-                        time.sleep(1.0)
-                        st.rerun()
-                    else:
-                        st.error(f"❌ चेहरा मॅच झाला नाही! (Distance Score: {round(diff_ratio, 2)})")
-                except Exception as e:
-                    st.error(f"प्रमाणीकरण एरर: {e}")
+            # Jevha cam photo gheil, direct processing suru hoil, button chi garajch nahi!
+            if login_cam:
+                with st.spinner("🔄 Biometric Analysis in progress..."):
+                    try:
+                        base_img = st.session_state['user_db'][login_name]
+                        login_img = Image.open(login_cam).convert('RGB')
+                        
+                        base_resized = base_img.resize((300, 300))
+                        login_resized = login_img.resize((300, 300))
+                        
+                        diff = ImageChops.difference(base_resized, login_resized)
+                        stat = ImageStat.Stat(diff)
+                        diff_ratio = sum(stat.mean) / (3 * 255)
+                        
+                        if diff_ratio < 0.35:
+                            st.session_state['authenticated'] = True
+                            st.session_state['current_user'] = login_name
+                            st.success(f"🔓 स्वागत आहे {login_name}! सिस्टीम अनलॉक झाली.")
+                            time.sleep(0.5)
+                            st.rerun() # Direct UI refresh karun aat ghenar
+                        else:
+                            st.error(f"❌ चेहरा मॅच झाला नाही! (Distance Score: {round(diff_ratio, 2)})")
+                    except Exception as e:
+                        st.error(f"प्रमाणीकरण एरर: {e}")
 
 # 🔓 PHASE 2: AUTOMATION CONTROL PANEL (UNIVERSAL APP COMMANDS)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     st.info(f"💾 **Last Detected Command:** {st.session_state['last_command']}")
     
-    st.markdown("### 🎙️ Web Voice Automation Command Center")
-    st.write("मोबाईलवर वापरताना माईल परमिशन **Allow** करा, बोला आणि स्टॉप करा.")
+    st.markdown("### 🎙️ Mobile Voice Automation Command Center")
     
     from streamlit_mic_recorder import speech_to_text
     
@@ -127,79 +139,47 @@ else:
                         st.markdown(f"### 📖 Wikipedia Summary:")
                         st.info(response['extract'])
                     else:
-                        webbrowser.open(f"https://www.google.com/search?q={search_term}")
+                        st.session_state['redirect_url'] = f"https://www.google.com/search?q={search_term}"
+                        st.rerun()
                 except Exception as wiki_err:
                     st.error(f"विकिपीडिया एरर: {wiki_err}")
             
-            # --- 📱 २. अल्टीमेट मोबाईल हार्डवेअर आणि सेटिंग्स ऑटोमेशन (Android/iOS Special) ---
-            elif any(x in clean_command for x in ['wifi', 'wi-fi', 'data', 'internet', 'torch', 'flashlight', 'bluetooth', 'hotspot', 'location', 'gps', 'settings']):
-                st.info("🔄 Triggering Mobile Hardware System Intent...")
-                
-                # Wi-Fi Settings उघडण्यासाठी
+            # --- 📱 २. मोबाईल सिस्टीम सेटिंग्ज (True Deep Linking Engine) ---
+            elif any(x in clean_command for x in ['wifi', 'wi-fi', 'data', 'internet', 'location', 'gps', 'hotspot', 'tethering', 'bluetooth']):
                 if 'wifi' in clean_command or 'wi-fi' in clean_command:
-                    webbrowser.open("intent:#Intent;action=android.settings.WIFI_SETTINGS;end") # Android
-                    webbrowser.open("App-Prefs:root=WIFI") # iOS Backup
-                    st.success("Opening Wi-Fi Settings Panel...")
-                
-                # Mobile Data / Cellular Settings उघडण्यासाठी
+                    st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.WIFI_SETTINGS;end"
                 elif 'data' in clean_command or 'internet' in clean_command:
-                    webbrowser.open("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end")
-                    webbrowser.open("App-Prefs:root=MOBILE_DATA_SETTINGS_ID")
-                    st.success("Opening Mobile Data Settings...")
-                
-                # Location / GPS Settings उघडण्यासाठी
+                    st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end"
                 elif 'location' in clean_command or 'gps' in clean_command:
-                    webbrowser.open("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end")
-                    webbrowser.open("App-Prefs:root=Privacy&path=LOCATION")
-                    st.success("Opening Location (GPS) Settings...")
-
-                # Hotspot / Tethering Settings उघडण्यासाठी
+                    st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end"
                 elif 'hotspot' in clean_command or 'tethering' in clean_command:
-                    webbrowser.open("intent:#Intent;action=android.settings.TETHER_SETTINGS;end")
-                    webbrowser.open("App-Prefs:root=INTERNET_TETHERING")
-                    st.success("Opening Hotspot Settings...")
-
-                # Bluetooth Settings उघडण्यासाठी
+                    st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.TETHER_SETTINGS;end"
                 elif 'bluetooth' in clean_command:
-                    webbrowser.open("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end")
-                    webbrowser.open("App-Prefs:root=Bluetooth")
-                    st.success("Opening Bluetooth Settings...")
-
-                # Torch / Flashlight (मोबाईलमध्ये टॉर्च टॉगल करण्यासाठी थेट सिस्टीम अ‍ॅक्सेस)
-                elif 'torch' in clean_command or 'flashlight' in clean_command:
-                    webbrowser.open("intent:#Intent;action=android.media.action.STILL_IMAGE_CAMERA;end") # कॅमेरा फ्लॅश डायरेक्ट ट्रिगर
-                    st.success("Opening Camera Hardware Interface for Torch/Flashlight Access...")
-
-            # --- 🚀 ३. युनिव्हर्सल मोबाईल अ‍ॅप्स ओपनिंग मॅजिक्स (Deep Linking) ---
+                    st.session_state['redirect_url'] = "intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end"
+                st.rerun()
+            
+            # --- 🚀 ३. युनिव्हर्सल मोबाईल ॲप्स (Direct Web + Deep Links) ---
             elif 'open' in clean_command or 'start' in clean_command:
                 app = clean_command.replace("open ", "").replace("start ", "").strip()
                 
                 if 'instagram' in app or 'insta' in app:
-                    webbrowser.open("instagram://app")
-                    st.info("Opening Instagram App...")
+                    st.session_state['redirect_url'] = "instagram://app"
                 elif 'youtube' in app or 'yt' in app:
-                    webbrowser.open("youtube://")
-                    st.info("Opening YouTube App...")
+                    st.session_state['redirect_url'] = "youtube://"
                 elif 'whatsapp' in app:
-                    webbrowser.open("whatsapp://send")
-                    st.info("Opening WhatsApp App...")
+                    st.session_state['redirect_url'] = "whatsapp://send"
                 elif 'facebook' in app or 'fb' in app:
-                    webbrowser.open("fb://")
-                    st.info("Opening Facebook App...")
+                    st.session_state['redirect_url'] = "fb://"
                 elif 'maps' in app or 'map' in app:
-                    webbrowser.open("geo:0,0?q=maps") # मोबाईल गुगल मॅप्स डायरेक्ट अ‍ॅप उघडेल
-                    st.info("Opening Google Maps App...")
+                    st.session_state['redirect_url'] = "geo:0,0?q=maps"
                 elif 'gmail' in app or 'mail' in app:
-                    webbrowser.open("googlegmail://")
-                    st.info("Opening Gmail App...")
-                elif 'github' in app:
-                    webbrowser.open("https://github.com")
-                    st.info("Opening GitHub...")
+                    st.session_state['redirect_url'] = "googlegmail://"
                 else:
-                    webbrowser.open(f"https://www.google.com/search?q={app}")
-                    st.success(f"Searching for '{app}' on Google...")
+                    st.session_state['redirect_url'] = f"https://www.google.com/search?q={app}"
+                st.rerun()
             else:
-                webbrowser.open(f"https://www.google.com/search?q={clean_command}")
+                st.session_state['redirect_url'] = f"https://www.google.com/search?q={clean_command}"
+                st.rerun()
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
