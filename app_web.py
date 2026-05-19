@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Multi-User Voice Bot (Smart Return Auto-Refresh)")
+st.title("🤖 Next-Gen Multi-User Voice Bot (Smart Wake-Up Focus Mode)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -90,13 +90,13 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (SMART RETURN FIX)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (NO-REFRESH WAKE-UP FIX)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE SMART RETURN AUTO-REFRESH ENGINE ---
+    # --- 🎙️ JAVASCRIPT: THE PURE FOCUS WAKE-UP ENGINE (NO REFRESH NEEDED) ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px;">
         <p style="margin:0; font-weight:bold; color:#1f77b4;">🍏 Siri Mode: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
@@ -112,21 +112,31 @@ else:
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
-            // 🔥 ट्रॅकर: कमांड चालली की नाही हे बघण्यासाठी
             let actionExecuted = false; 
 
             function executeInstantAction(intentUrl) {
-                actionExecuted = true; // सिस्टमला समजलं की आपण ॲप उघडलंय
-                window.open(intentUrl, '_blank');
-                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Will Auto-Refresh when you return.</span>";
-                recognition.stop(); // ॲप उघडताना माईक थांबवून ठेवा
+                actionExecuted = true; 
+                window.open(intentUrl, '_blank'); // ॲप नवीन टॅबमध्ये सुसाट उघडेल
+                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Return to this screen to continue...</span>";
+                recognition.stop(); // ॲप उघडताना माईक थांबवा
             }
 
-            // 🔥 जादुई सेन्सर: जेव्हा तू परत पहिल्या टॅबवर येशील, तेव्हाच हे काम करेल
+            // 🔥 हा आहे तो कडक मास्टर सेन्सर: युझर परत आला की पेज रिफ्रेश न करता फक्त माईक ऑन कर!
+            function wakeUpSystem() {
+                if (actionExecuted) {
+                    actionExecuted = false; // ट्रॅकर रिसेट
+                    document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 Welcome back! Mic is ACTIVE again. Speak now!</span>";
+                    setTimeout(() => {
+                        try { recognition.start(); } catch(e) {}
+                    }, 500); // 0.5 सेकंदात माईक जिवंत!
+                }
+            }
+
+            // मोबाईलमध्ये टॅब फोकसवर लक्ष ठेवणारे दोन मजबूत सेन्सर्स
+            window.addEventListener("focus", wakeUpSystem);
             document.addEventListener("visibilitychange", function() {
-                if (document.visibilityState === "visible" && actionExecuted === true) {
-                    // युझर परत आलाय! लगेच पूर्ण पेज रिफ्रेश करा म्हणजे माईक नवाकोरा होईल!
-                    window.parent.location.href = window.parent.location.href;
+                if (document.visibilityState === "visible") {
+                    wakeUpSystem();
                 }
             });
 
