@@ -13,18 +13,33 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Voice Bot (Talking AI + History)")
+st.title("🤖 Next-Gen Voice Bot (Permanent Login + History)")
 st.write("---")
 
-# --- २. MULTI-USER SESSION STATES ---
+# --- २. PERMANENT FACE DATABASE (कायमस्वरूपी फोल्डर) ---
+# जर फोल्डर नसेल, तर नवीन बनवा
+if not os.path.exists("registered_faces"):
+    os.makedirs("registered_faces")
+
+# जुने सेव्ह केलेले चेहरे लोड करा (म्हणजे रिफ्रेश केल्यावर डिलीट होणार नाहीत)
 if 'user_db' not in st.session_state:
     st.session_state['user_db'] = {} 
-if 'current_user' not in st.session_state:
-    st.session_state['current_user'] = None
-if 'authenticated' not in st.session_state:
-    st.session_state['authenticated'] = False
+    for file in os.listdir("registered_faces"):
+        if file.endswith((".jpg", ".jpeg", ".png")):
+            name = os.path.splitext(file)[0]
+            img_path = os.path.join("registered_faces", file)
+            st.session_state['user_db'][name] = Image.open(img_path).convert('RGB')
 
-# --- ३. MAIN UI RENDERING ---
+# --- ३. AUTO-LOGIN CHECK (URL Token) ---
+# जर URL मध्ये युझरचं नाव असेल, तर त्याला थेट आत घ्या!
+if 'user' in st.query_params:
+    st.session_state['authenticated'] = True
+    st.session_state['current_user'] = st.query_params['user']
+elif 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
+    st.session_state['current_user'] = None
+
+# --- ४. MAIN UI RENDERING ---
 col1, col2 = st.columns(2)
 with col1:
     status_text = f"🔓 UNLOCKED ({st.session_state['current_user']})" if st.session_state['authenticated'] else "LOCKED 🔒"
@@ -34,7 +49,7 @@ with col2:
 
 st.write("---")
 
-# --- ४. REGISTRATION & AUTOMATIC LOGIN TABS ---
+# --- ५. REGISTRATION & AUTOMATIC LOGIN TABS ---
 if not st.session_state['authenticated']:
     tab1, tab2 = st.tabs(["📝 New User Registration", "🔑 Automatic Biometric Login"])
     
@@ -47,7 +62,12 @@ if not st.session_state['authenticated']:
             if reg_name and reg_cam:
                 reg_image = Image.open(reg_cam).convert('RGB')
                 st.session_state['user_db'][reg_name] = reg_image
-                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी यशस्वी झाली आहे! आता लॉगिन टॅबमध्ये जा.")
+                
+                # 🔥 चेहरा कायमचा सेव्ह करा (Hard Drive वर)
+                save_path = os.path.join("registered_faces", f"{reg_name}.jpg")
+                reg_image.save(save_path)
+                
+                st.success(f"🎉 {reg_name} ची बायोमेट्रिक नोंदणी कायमस्वरूपी यशस्वी झाली आहे! आता लॉगिन टॅबमध्ये जा.")
             else:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
@@ -84,19 +104,23 @@ if not st.session_state['authenticated']:
                         if match_found:
                             st.session_state['authenticated'] = True
                             st.session_state['current_user'] = identified_user
+                            
+                            # 🔥 URL मध्ये टोकन लावा (ऑटो-लॉगिनसाठी)
+                            st.query_params["user"] = identified_user
+                            
                             st.rerun()
                         else:
                             st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})")
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (WIKIPEDIA AI ENGINE WITH HISTORY)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL 
 else:
-    st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}! (Your session is active)")
+    st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}! (Your session is permanently active)")
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE SMART WIKIPEDIA ENGINE WITH HISTORY & SCROLLBAR ---
+    # --- 🎙️ JAVASCRIPT: THE SMART WIKIPEDIA ENGINE WITH HISTORY ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
         <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
@@ -110,14 +134,10 @@ else:
             <h4 style="margin:0; color:#2c3e50;">📜 Search History</h4>
             <button onclick="clearHistory()" style="background:#e74c3c; color:white; border:none; border-radius:5px; padding:5px 10px; cursor:pointer; font-size:12px;">🗑️ Clear</button>
         </div>
-        <div id="history-list">
-            </div>
+        <div id="history-list"></div>
     </div>
 
     <script>
-        // ---------------------------------------------------------
-        // 📜 HISTORY LOGIC (LocalStorage) 
-        // ---------------------------------------------------------
         function updateHistoryUI() {
             let history = JSON.parse(localStorage.getItem('abhii_bot_history')) || [];
             let html = "";
@@ -150,9 +170,6 @@ else:
 
         updateHistoryUI();
 
-        // ---------------------------------------------------------
-        // 🤖 AI & MIC LOGIC
-        // ---------------------------------------------------------
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
             document.getElementById("speech-live").innerText = "Web Speech API not supported.";
@@ -321,17 +338,20 @@ else:
 
     st.write("---")
     
-    # 🔥 इथे मी दोन वेगवेगळे बटन्स लावले आहेत!
+    # 🔥 हे बघ! लॉगआउट आणि लॉक बटणांचे टोकन क्लिअरिंग लॉजिक
     lock_col, logout_col = st.columns(2)
     
     with lock_col:
         if st.button("🔒 Lock System Manually", use_container_width=True):
             st.session_state['authenticated'] = False
-            # current_user तसाच ठेवलाय म्हणजे युझर लॉग-आउट होणार नाही, फक्त स्क्रीन लॉक होईल.
+            # URL मधून टोकन काढा म्हणजे रिफ्रेश केल्यावर लॉक राहील
+            st.query_params.clear() 
             st.rerun()
             
     with logout_col:
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state['authenticated'] = False
-            st.session_state['current_user'] = None # इथून पूर्णपणे बाहेर पडेल!
+            st.session_state['current_user'] = None 
+            # URL मधून टोकन काढा
+            st.query_params.clear() 
             st.rerun()
