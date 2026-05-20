@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Voice Bot (Talking Wikipedia AI)")
+st.title("🤖 Next-Gen Voice Bot (Talking AI + History)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -90,23 +90,70 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (WIKIPEDIA AI ENGINE)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (WIKIPEDIA AI ENGINE WITH HISTORY)
 else:
-    st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
+    st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}! (Your session is active)")
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE SMART WIKIPEDIA ENGINE WITH SCROLLBAR ---
+    # --- 🎙️ JAVASCRIPT: THE SMART WIKIPEDIA ENGINE WITH HISTORY & SCROLLBAR ---
     js_stable_engine = """
-    <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center; max-height: 400px; overflow-y: auto; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
-        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px; position: sticky; top: 0; background-color: #f0f2f6; padding-bottom: 5px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
+    <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
+        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
         
         <button id="refresh-btn" style="width:100%; padding:12px; background-color:#f39c12; color:white; font-size:16px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom:10px;">🔄 Refresh / Wake Up Voice</button>
-
         <button id="wakeup-btn" style="display:none; width:100%; padding:15px; background-color:#2ecc71; color:white; font-size:18px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🎤 Tap Here to Resume Mic</button>
     </div>
 
+    <div id="history-container" style="background-color:#ffffff; border-radius:10px; padding:15px; max-height: 250px; overflow-y: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align:left;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #f0f2f6; padding-bottom: 5px; margin-bottom: 10px;">
+            <h4 style="margin:0; color:#2c3e50;">📜 Search History</h4>
+            <button onclick="clearHistory()" style="background:#e74c3c; color:white; border:none; border-radius:5px; padding:5px 10px; cursor:pointer; font-size:12px;">🗑️ Clear</button>
+        </div>
+        <div id="history-list">
+            </div>
+    </div>
+
     <script>
+        // ---------------------------------------------------------
+        // 📜 HISTORY LOGIC (LocalStorage) - मोबाईलवर कायम सेव्ह राहील
+        // ---------------------------------------------------------
+        function updateHistoryUI() {
+            let history = JSON.parse(localStorage.getItem('abhii_bot_history')) || [];
+            let html = "";
+            if (history.length === 0) {
+                html = "<p style='color:#7f8c8d; font-size:14px; text-align:center;'>No history yet. Start speaking!</p>";
+            } else {
+                history.forEach(item => {
+                    html += `
+                        <div style="background:#f8f9fa; padding:10px; margin-bottom:8px; border-radius:8px; border-left: 4px solid #1f77b4;">
+                            <div style="font-weight:bold; color:#2980b9; margin-bottom:4px;">🗣️ You: ${item.query}</div>
+                            <div style="color:#444; font-size:14px;">🤖 AI: ${item.response}</div>
+                        </div>`;
+                });
+            }
+            document.getElementById('history-list').innerHTML = html;
+        }
+
+        function saveHistory(query, response) {
+            let history = JSON.parse(localStorage.getItem('abhii_bot_history')) || [];
+            history.unshift({query: query, response: response}); // नवीन सर्च सर्वात वर!
+            if(history.length > 30) history.pop(); // फक्त शेवटचे 30 सर्च सेव्ह ठेवेल
+            localStorage.setItem('abhii_bot_history', JSON.stringify(history));
+            updateHistoryUI();
+        }
+
+        function clearHistory() {
+            localStorage.removeItem('abhii_bot_history');
+            updateHistoryUI();
+        }
+
+        // पेज लोड झाल्यावर लगेच हिस्टरी दाखवा
+        updateHistoryUI();
+
+        // ---------------------------------------------------------
+        // 🤖 AI & MIC LOGIC
+        // ---------------------------------------------------------
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
             document.getElementById("speech-live").innerText = "Web Speech API not supported.";
@@ -115,7 +162,6 @@ else:
             let actionExecuted = false; 
             let isSpeaking = false; 
 
-            // 🗣️ Text-to-Speech Function (Feedback Loop Fixed)
             function speakText(text) {
                 window.speechSynthesis.cancel();
                 isSpeaking = true;
@@ -145,7 +191,6 @@ else:
                 window.speechSynthesis.speak(speech);
             }
 
-            // 🌐 SMART Wikipedia API Function
             function askWikipedia(searchTerm) {
                 if (recognition) { try { recognition.abort(); } catch(e) {} } 
                 
@@ -165,19 +210,19 @@ else:
                     }
                     
                     document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>💬 </span>" + answer;
+                    saveHistory(searchTerm, answer); // 🔥 हिस्टरी मध्ये सेव्ह करा!
                     speakText(answer); 
                 })
                 .catch(err => {
-                    let errMsg = "Sorry, Wikipedia couldn't find a direct page for '" + searchTerm + "'. Try speaking just the name clearly.";
+                    let errMsg = "Sorry, Wikipedia couldn't find a direct page for '" + searchTerm + "'.";
                     document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⚠️ </span>" + errMsg;
+                    saveHistory(searchTerm, errMsg); // एरर आला तरी सेव्ह करा!
                     speakText(errMsg);
                 });
             }
 
-            // 🎤 Main Mic Function
             function startFreshMic() {
                 if (isSpeaking) return;
-
                 if (recognition) { try { recognition.abort(); } catch(e) {} }
 
                 recognition = new SpeechRecognition();
@@ -206,19 +251,20 @@ else:
                         if (query.includes("python") || query.includes("paithen")) {
                             let cleanCmd = query.replace("python", "").replace("paithen", "").replace("open", "").replace("start", "").trim();
                             
-                            function fireIntent(intentUrl) {
+                            function fireIntent(intentUrl, appName) {
                                 actionExecuted = true; 
+                                saveHistory(query, `Opened ${appName} App ⚡`); // ॲप ओपनिंग पण सेव्ह होईल!
                                 window.open(intentUrl, '_blank'); 
                                 document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
                             }
 
-                            if (cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
-                            else if (cleanCmd.includes("youtube")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
-                            else if (cleanCmd.includes("instagram")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
-                            else if (cleanCmd.includes("facebook")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
-                            else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
-                            else if (cleanCmd.includes("wifi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
-                            else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
+                            if (cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end", "WhatsApp");
+                            else if (cleanCmd.includes("youtube")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end", "YouTube");
+                            else if (cleanCmd.includes("instagram")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end", "Instagram");
+                            else if (cleanCmd.includes("facebook")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end", "Facebook");
+                            else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end", "Google Maps");
+                            else if (cleanCmd.includes("wifi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end", "WiFi Settings");
+                            else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end", "Bluetooth Settings");
                             
                             else if (cleanCmd.length > 1) {
                                 let searchQuery = cleanCmd.replace("search", "").replace("who is", "").replace("what is", "").replace("tell me about", "").trim();
@@ -237,7 +283,6 @@ else:
                 try { recognition.start(); } catch(e) {}
             }
 
-            // 🔥 नवीन रिफ्रेश बटण लॉजिक 
             document.getElementById("refresh-btn").addEventListener("click", function() {
                 actionExecuted = false;
                 isSpeaking = false;
@@ -273,11 +318,11 @@ else:
         }
     </script>
     """
-    # 🔥 Iframe ची उंची 260 वरून 450 केली आहे, जेणेकरून स्क्रोल करायला जागा मिळेल!
-    components.html(js_stable_engine, height=450)
+    # 🔥 उंची 600 केली आहे, जेणेकरून माईक आणि हिस्ट्री दोन्ही एकदम स्पष्ट दिसतील!
+    components.html(js_stable_engine, height=600)
 
     st.write("---")
-    if st.button("🛑 Lock System Manually", use_container_width=True):
+    if st.button("🛑 Lock System Manually (Logout)", use_container_width=True):
         st.session_state['authenticated'] = False
         st.session_state['current_user'] = None
         st.rerun()
