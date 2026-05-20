@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Voice Bot (Ultra-Stable AI)")
+st.title("🤖 Next-Gen Voice Bot (Strict Secure + Gemini AI)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -77,7 +77,8 @@ if not st.session_state['authenticated']:
                             
                             if diff_ratio < best_score:
                                 best_score = diff_ratio
-                                if diff_ratio < 0.45: 
+                                # 🔥 सिक्युरिटी फिक्स: 0.45 वरून 0.18 केलंय, आता फक्त अचूक चेहराच पास होईल!
+                                if diff_ratio < 0.18: 
                                     match_found = True
                                     identified_user = name
                         
@@ -86,20 +87,20 @@ if not st.session_state['authenticated']:
                             st.session_state['current_user'] = identified_user
                             st.rerun()
                         else:
-                            st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})")
+                            st.error(f"❌ चेहरा ओळखता आला नाही! (सुरक्षा नकार: Distance: {round(best_score, 2)})")
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (ULTRA-STABLE ENGINE)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (GEMINI AI ENGINE)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE ULTRA-STABLE DOUBLE ENGINE ---
+    # --- 🎙️ JAVASCRIPT: THE ULTRA-STABLE GEMINI ENGINE ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center;">
-        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:10px;">🤖 Double Engine AI: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
+        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:10px;">🤖 Gemini AI: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
         
         <button id="wakeup-btn" style="display:none; width:100%; padding:15px; background-color:#2ecc71; color:white; font-size:18px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🎤 Tap Here to Resume Mic</button>
     </div>
@@ -111,12 +112,14 @@ else:
         } else {
             let recognition;
             let actionExecuted = false; 
-            let isListening = false; // माईकची स्थिती ट्रॅक करण्यासाठी
-            let isSpeaking = false;  // रोबोट बोलतोय का हे ट्रॅक करण्यासाठी
+            let isListening = false;
+            let isSpeaking = false; 
+            
+            // 🛑 महत्त्वाची स्टेप: इथे तुझी Gemini API Key टाक!
+            const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
 
-            // 🗣️ एकदम सुरक्षित Text-to-Speech फंक्शन
             function speakText(text) {
-                window.speechSynthesis.cancel(); // जुना अडकलेला आवाज क्लिअर करा
+                window.speechSynthesis.cancel();
                 isSpeaking = true;
                 
                 let speech = new SpeechSynthesisUtterance(text);
@@ -137,28 +140,37 @@ else:
                 window.speechSynthesis.speak(speech);
             }
 
-            // 🌐 विकिपीडिया चॅटबॉट फंक्शन
-            function askWikipedia(searchTerm) {
+            // 🧠 विकिपीडिया ऐवजी आता डायरेक्ट Google Gemini AI वापरणार!
+            function askGemini(searchTerm) {
                 try { recognition.abort(); } catch(e) {} 
                 
-                document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🔍 Searching Wikipedia for: </span>" + searchTerm + "...";
+                document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🧠 Gemini is thinking about: </span>" + searchTerm + "...";
 
-                fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchTerm)}`)
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+                
+                // रोबोटला जास्त लांब बोलायला लागू नये म्हणून आपण त्याला 2-3 ओळीत उत्तर द्यायला सांगत आहोत.
+                const prompt = searchTerm + " (Please give a short and concise answer in 2-3 sentences max.)";
+
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                })
                 .then(response => response.json())
                 .then(data => {
-                    let answer = "";
-                    if (data.type === "standard" || data.type === "disambiguation") {
-                        answer = data.extract; 
-                    } else {
-                        answer = "Sorry, I couldn't find accurate information about " + searchTerm + " on Wikipedia.";
+                    let answer = "Sorry, I couldn't process that.";
+                    if (data.candidates && data.candidates.length > 0) {
+                        answer = data.candidates[0].content.parts[0].text;
                     }
                     
-                    document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🤖 Assistant: </span>" + answer;
-                    speakText(answer); // स्टेबल फंक्शन कॉल करा
+                    document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🤖 Gemini: </span>" + answer;
+                    speakText(answer); 
                 })
                 .catch(err => {
                     document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⚠️ Network Error!</span>";
-                    speakText("Sorry, there was an internet error while fetching data.");
+                    speakText("Sorry, there was an internet error connecting to Gemini.");
                 });
             }
 
@@ -170,9 +182,7 @@ else:
                 recognition.interimResults = true;
                 recognition.lang = 'en-US';
 
-                recognition.onstart = function() {
-                    isListening = true;
-                };
+                recognition.onstart = function() { isListening = true; };
 
                 recognition.onresult = function(event) {
                     let interimTranscript = '';
@@ -217,10 +227,10 @@ else:
                             else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) fireIntent("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
                             else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
                             
-                            // 🤖 विकिपीडिया चॅटबॉट 
+                            // 🧠 Gemini चॅटबॉट (पूर्ण वाक्य ऐकल्यावरच सर्च मारेल!)
                             else if (cleanCmd.length > 2) {
                                 let searchQuery = cleanCmd.replace("search", "").replace("who is", "").replace("what is", "").replace("tell me about", "").trim();
-                                askWikipedia(searchQuery);
+                                askGemini(searchQuery);
                             }
                         }
                     }
@@ -228,18 +238,14 @@ else:
 
                 recognition.onend = function() {
                     isListening = false;
-                    // जर ॲप उघडलं नसेल आणि रोबोट बोलत नसेल, तर माईक लूपमध्ये चालू ठेवा
                     if (!actionExecuted && !isSpeaking) {
-                        setTimeout(() => {
-                            try { recognition.start(); } catch(err) {}
-                        }, 500);
+                        setTimeout(() => { try { recognition.start(); } catch(err) {} }, 500);
                     }
                 };
 
                 try { recognition.start(); } catch(e) {}
             }
 
-            // 🛡️ Watchdog Timer: माईक चुकून झोपला तर त्याला आपोआप उठवणारी सिस्टीम!
             setInterval(() => {
                 if (!isListening && !actionExecuted && !isSpeaking) {
                     try { recognition.start(); } catch(e) {}
