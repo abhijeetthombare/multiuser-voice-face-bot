@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Voice Bot (Stable Wikipedia AI)")
+st.title("🤖 Next-Gen Voice Bot (Talking Wikipedia AI)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -96,11 +96,13 @@ else:
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE SMART WIKIPEDIA ENGINE ---
+    # --- 🎙️ JAVASCRIPT: THE SMART WIKIPEDIA ENGINE WITH REFRESH BUTTON ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center;">
-        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:10px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
+        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
         
+        <button id="refresh-btn" style="width:100%; padding:12px; background-color:#f39c12; color:white; font-size:16px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom:10px;">🔄 Refresh / Wake Up Voice</button>
+
         <button id="wakeup-btn" style="display:none; width:100%; padding:15px; background-color:#2ecc71; color:white; font-size:18px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🎤 Tap Here to Resume Mic</button>
     </div>
 
@@ -113,6 +115,7 @@ else:
             let actionExecuted = false; 
             let isSpeaking = false; 
 
+            // 🗣️ Text-to-Speech Function
             function speakText(text) {
                 window.speechSynthesis.cancel();
                 isSpeaking = true;
@@ -141,7 +144,6 @@ else:
             function askWikipedia(searchTerm) {
                 try { recognition.abort(); } catch(e) {} 
                 
-                // 🔥 THE FIX: "shivaji maharaj" ला "Shivaji_Maharaj" मध्ये कनवर्ट करा!
                 let formattedTerm = searchTerm.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('_');
                 
                 document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🔍 Searching Wikipedia for: </span>" + searchTerm + "...";
@@ -167,6 +169,7 @@ else:
                 });
             }
 
+            // 🎤 Main Mic Function
             function startFreshMic() {
                 if (recognition) { try { recognition.abort(); } catch(e) {} }
 
@@ -208,7 +211,6 @@ else:
                             else if (cleanCmd.includes("wifi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                             else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
                             
-                            // 🔍 चॅटबॉट सर्च (Wikipedia)
                             else if (cleanCmd.length > 1) {
                                 let searchQuery = cleanCmd.replace("search", "").replace("who is", "").replace("what is", "").replace("tell me about", "").trim();
                                 askWikipedia(searchQuery);
@@ -225,6 +227,20 @@ else:
 
                 try { recognition.start(); } catch(e) {}
             }
+
+            // 🔥 नवीन रिफ्रेश बटण लॉजिक (ह्याने आवाज पण अनलॉक होईल!)
+            document.getElementById("refresh-btn").addEventListener("click", function() {
+                actionExecuted = false;
+                isSpeaking = false;
+                window.speechSynthesis.cancel(); // जुना अडकलेला आवाज क्लिअर करा
+                
+                // ब्राउझरला वाटेल की युझरने 'ऑडिओ' चालवायला परवानगी दिली आहे
+                let unlockSpeech = new SpeechSynthesisUtterance('');
+                window.speechSynthesis.speak(unlockSpeech);
+
+                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>🔄 Refreshed! Voice Unlocked. Speak now...</span>";
+                startFreshMic(); 
+            });
 
             setInterval(() => {
                 if (!actionExecuted && !isSpeaking && recognition) {
@@ -249,7 +265,7 @@ else:
         }
     </script>
     """
-    components.html(js_stable_engine, height=220)
+    components.html(js_stable_engine, height=260)
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
