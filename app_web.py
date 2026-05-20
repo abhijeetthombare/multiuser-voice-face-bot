@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Voice Bot (Bug-Free Gemini AI)")
+st.title("🤖 Next-Gen Voice Bot (Echo-Free Gemini AI)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -97,7 +97,7 @@ else:
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE BUG-FREE GEMINI ENGINE ---
+    # --- 🎙️ JAVASCRIPT: THE ECHO-FREE GEMINI ENGINE ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center;">
         <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:10px;">🤖 Gemini AI: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
@@ -115,16 +115,14 @@ else:
             let isSpeaking = false; 
             
             // 🛑 महत्त्वाची स्टेप: इथे तुझी Gemini API Key टाक!
-            const GEMINI_API_KEY = "AIzaSyBSzMJouB6JtzZCE_mx8ZsdoR-_UXIVwLc"; // 🔥 SECURITY ALERT: हे Key सार्वजनिकपणे शेअर करू नका, फक्त टेस्टिंगसाठी वापरा!
-
-            let speechTimer = null; 
+            const GEMINI_API_KEY = "AIzaSyBSzMJouB6JtzZCE_mx8ZsdoR-_UXIVwLc"; // 🔥 SECURITY ALERT: Never expose
 
             // 🗣️ Text-to-Speech Function
             function speakText(text) {
                 window.speechSynthesis.cancel();
                 isSpeaking = true;
                 
-                // 🔥 Bug Fix: Gemini च्या उत्तरांमधून ** आणि * काढून टाका जेणेकरून रोबोट अडकणार नाही!
+                // 🔥 Bug Fix: Gemini च्या उत्तरांमधून ** आणि * काढून टाका!
                 let cleanTextForSpeech = text.replace(/[*#]/g, ''); 
                 
                 let speech = new SpeechSynthesisUtterance(cleanTextForSpeech);
@@ -134,12 +132,12 @@ else:
                 speech.onend = function() {
                     isSpeaking = false;
                     document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is listening again...</span>";
-                    startFreshMic(); // बोलून झाल्यावर लगेच माईक सुरू
+                    setTimeout(startFreshMic, 500); // बोलून झाल्यावर लगेच माईक सुरू
                 };
 
                 speech.onerror = function() {
                     isSpeaking = false;
-                    startFreshMic();
+                    setTimeout(startFreshMic, 500);
                 };
                 
                 window.speechSynthesis.speak(speech);
@@ -187,64 +185,57 @@ else:
                 if (recognition) { try { recognition.abort(); } catch(e) {} }
 
                 recognition = new SpeechRecognition();
-                recognition.continuous = true; 
+                // 🔥 THE ONE-TIME FIX: continuous = false केल्यावर Android डुप्लिकेशन करणार नाही!
+                recognition.continuous = false; 
                 recognition.interimResults = true;
                 recognition.lang = 'en-US';
 
                 recognition.onresult = function(event) {
-                    let finalTranscript = '';
-                    let interimTranscript = '';
+                    let transcript = "";
+                    let isFinalCommand = false;
 
-                    // 🔥 Android Duplication Bug Fix: नव्याने स्ट्रिंग तयार करणे
                     for (let i = 0; i < event.results.length; ++i) {
+                        transcript += event.results[i][0].transcript;
                         if (event.results[i].isFinal) {
-                            finalTranscript += event.results[i][0].transcript;
-                        } else {
-                            interimTranscript += event.results[i][0].transcript;
+                            isFinalCommand = true;
                         }
                     }
 
-                    document.getElementById("speech-live").innerText = finalTranscript + interimTranscript;
+                    document.getElementById("speech-live").innerText = transcript;
                     
-                    clearTimeout(speechTimer); // बोलत असताना टायमर थांबवा
-
-                    if (finalTranscript.trim().length > 0) {
-                        speechTimer = setTimeout(() => {
-                            const query = finalTranscript.toLowerCase().trim();
+                    if (isFinalCommand) {
+                        const query = transcript.toLowerCase().trim();
+                        
+                        // 🔥 Strict trigger word check:
+                        if (query.includes("python") || query.includes("paithen")) {
+                            let cleanCmd = query.replace("python", "").replace("paithen", "").replace("open", "").replace("start", "").trim();
                             
-                            // 🔥 Strict trigger word check: 'py' नाही, फक्त पूर्ण 'python' किंवा 'paithen'
-                            if (query.includes("python") || query.includes("paithen")) {
-                                let cleanCmd = query.replace("python", "").replace("paithen", "").replace("open", "").replace("start", "").trim();
-                                
-                                function fireIntent(intentUrl) {
-                                    actionExecuted = true; 
-                                    window.open(intentUrl, '_blank'); 
-                                    document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
-                                    try { recognition.abort(); } catch(e) {} 
-                                }
-
-                                // 🔥 Strict App Logic: yt, fb वगैरे शॉर्टकट्स काढले, फक्त पूर्ण नावे!
-                                if (cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
-                                else if (cleanCmd.includes("youtube")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
-                                else if (cleanCmd.includes("instagram")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
-                                else if (cleanCmd.includes("facebook")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
-                                else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
-                                else if (cleanCmd.includes("wifi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
-                                else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
-                                
-                                // 🧠 चॅटबॉट सर्च (जर ॲप नसेल तर)
-                                else if (cleanCmd.length > 1) {
-                                    let searchQuery = cleanCmd.replace("search", "").trim();
-                                    askGemini(searchQuery);
-                                }
+                            function fireIntent(intentUrl) {
+                                actionExecuted = true; 
+                                window.open(intentUrl, '_blank'); 
+                                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
                             }
-                            // कमांड रन झाल्यानंतर माईक रीसेट करा
-                            try { recognition.abort(); } catch(e) {}
-                        }, 1200); // 🕒 1.2 सेकंदांचा संयमी पॉज!
+
+                            // 📱 ॲप लाँचर फीचर्स
+                            if (cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
+                            else if (cleanCmd.includes("youtube")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
+                            else if (cleanCmd.includes("instagram")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
+                            else if (cleanCmd.includes("facebook")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
+                            else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
+                            else if (cleanCmd.includes("wifi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
+                            else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
+                            
+                            // 🧠 चॅटबॉट सर्च (जर ॲप नसेल तर)
+                            else if (cleanCmd.length > 1) {
+                                let searchQuery = cleanCmd.replace("search", "").replace("who is", "").replace("what is", "").replace("tell me about", "").trim();
+                                askGemini(searchQuery);
+                            }
+                        }
                     }
                 };
 
                 recognition.onend = function() {
+                    // जर ॲप उघडलं नसेल आणि रोबोट बोलत नसेल, तर माईक आपोआप पुन्हा सुरू करा
                     if (!actionExecuted && !isSpeaking) {
                         setTimeout(() => { try { recognition.start(); } catch(err) {} }, 300);
                     }
