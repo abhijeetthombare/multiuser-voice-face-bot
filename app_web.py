@@ -115,7 +115,7 @@ else:
             let isSpeaking = false; 
             
             // 🛑 महत्त्वाची स्टेप: इथे तुझी Gemini API Key टाक!
-            const GEMINI_API_KEY = "AIzaSyBPB_sd-UoYqGm9f082FSsfLmmuOksw1Tk"; 
+            const GEMINI_API_KEY = "AIzaSyBSzMJouB6JtzZCE_mx8ZsdoR-_UXIVwLc"; // 🔥 SECURITY ALERT: हे Key सार्वजनिकपणे शेअर करू नका, फक्त टेस्टिंगसाठी वापरा!
 
             let speechTimer = null; 
 
