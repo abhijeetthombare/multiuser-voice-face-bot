@@ -116,7 +116,7 @@ else:
 
     <script>
         // ---------------------------------------------------------
-        // 📜 HISTORY LOGIC (LocalStorage) - मोबाईलवर कायम सेव्ह राहील
+        // 📜 HISTORY LOGIC (LocalStorage) 
         // ---------------------------------------------------------
         function updateHistoryUI() {
             let history = JSON.parse(localStorage.getItem('abhii_bot_history')) || [];
@@ -137,8 +137,8 @@ else:
 
         function saveHistory(query, response) {
             let history = JSON.parse(localStorage.getItem('abhii_bot_history')) || [];
-            history.unshift({query: query, response: response}); // नवीन सर्च सर्वात वर!
-            if(history.length > 30) history.pop(); // फक्त शेवटचे 30 सर्च सेव्ह ठेवेल
+            history.unshift({query: query, response: response}); 
+            if(history.length > 30) history.pop(); 
             localStorage.setItem('abhii_bot_history', JSON.stringify(history));
             updateHistoryUI();
         }
@@ -148,7 +148,6 @@ else:
             updateHistoryUI();
         }
 
-        // पेज लोड झाल्यावर लगेच हिस्टरी दाखवा
         updateHistoryUI();
 
         // ---------------------------------------------------------
@@ -210,13 +209,13 @@ else:
                     }
                     
                     document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>💬 </span>" + answer;
-                    saveHistory(searchTerm, answer); // 🔥 हिस्टरी मध्ये सेव्ह करा!
+                    saveHistory(searchTerm, answer); 
                     speakText(answer); 
                 })
                 .catch(err => {
                     let errMsg = "Sorry, Wikipedia couldn't find a direct page for '" + searchTerm + "'.";
                     document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⚠️ </span>" + errMsg;
-                    saveHistory(searchTerm, errMsg); // एरर आला तरी सेव्ह करा!
+                    saveHistory(searchTerm, errMsg); 
                     speakText(errMsg);
                 });
             }
@@ -253,7 +252,7 @@ else:
                             
                             function fireIntent(intentUrl, appName) {
                                 actionExecuted = true; 
-                                saveHistory(query, `Opened ${appName} App ⚡`); // ॲप ओपनिंग पण सेव्ह होईल!
+                                saveHistory(query, `Opened ${appName} App ⚡`); 
                                 window.open(intentUrl, '_blank'); 
                                 document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
                             }
@@ -318,11 +317,21 @@ else:
         }
     </script>
     """
-    # 🔥 उंची 600 केली आहे, जेणेकरून माईक आणि हिस्ट्री दोन्ही एकदम स्पष्ट दिसतील!
     components.html(js_stable_engine, height=600)
 
     st.write("---")
-    if st.button("🛑 Lock System Manually (Logout)", use_container_width=True):
-        st.session_state['authenticated'] = False
-        st.session_state['current_user'] = None
-        st.rerun()
+    
+    # 🔥 इथे मी दोन वेगवेगळे बटन्स लावले आहेत!
+    lock_col, logout_col = st.columns(2)
+    
+    with lock_col:
+        if st.button("🔒 Lock System Manually", use_container_width=True):
+            st.session_state['authenticated'] = False
+            # current_user तसाच ठेवलाय म्हणजे युझर लॉग-आउट होणार नाही, फक्त स्क्रीन लॉक होईल.
+            st.rerun()
+            
+    with logout_col:
+        if st.button("🚪 Logout", use_container_width=True):
+            st.session_state['authenticated'] = False
+            st.session_state['current_user'] = None # इथून पूर्णपणे बाहेर पडेल!
+            st.rerun()
