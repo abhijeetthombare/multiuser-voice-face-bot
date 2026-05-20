@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Voice Bot (Echo-Free Gemini AI)")
+st.title("🤖 Next-Gen Voice Bot (Stable Wikipedia AI)")
 st.write("---")
 
 # --- २. MULTI-USER SESSION STATES ---
@@ -91,16 +91,16 @@ if not st.session_state['authenticated']:
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
-# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (GEMINI AI ENGINE)
+# 🔓 PHASE 2: AUTOMATION CONTROL PANEL (WIKIPEDIA AI ENGINE)
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}!")
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE ECHO-FREE GEMINI ENGINE ---
+    # --- 🎙️ JAVASCRIPT: THE ECHO-FREE WIKIPEDIA ENGINE ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center;">
-        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:10px;">🤖 Gemini AI: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
+        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:10px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
         
         <button id="wakeup-btn" style="display:none; width:100%; padding:15px; background-color:#2ecc71; color:white; font-size:18px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🎤 Tap Here to Resume Mic</button>
     </div>
@@ -113,16 +113,12 @@ else:
             let recognition;
             let actionExecuted = false; 
             let isSpeaking = false; 
-            
-            // 🛑 महत्त्वाची स्टेप: इथे तुझी Gemini API Key टाक!
-            const GEMINI_API_KEY = "AIzaSyCDvwYO1Aw8JE6SXtRfD5mvuTMttIL1eKU"; // 🔥 SECURITY ALERT: Never expose
 
             // 🗣️ Text-to-Speech Function
             function speakText(text) {
                 window.speechSynthesis.cancel();
                 isSpeaking = true;
                 
-                // 🔥 Bug Fix: Gemini च्या उत्तरांमधून ** आणि * काढून टाका!
                 let cleanTextForSpeech = text.replace(/[*#]/g, ''); 
                 
                 let speech = new SpeechSynthesisUtterance(cleanTextForSpeech);
@@ -132,7 +128,7 @@ else:
                 speech.onend = function() {
                     isSpeaking = false;
                     document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is listening again...</span>";
-                    setTimeout(startFreshMic, 500); // बोलून झाल्यावर लगेच माईक सुरू
+                    setTimeout(startFreshMic, 500); 
                 };
 
                 speech.onerror = function() {
@@ -143,40 +139,26 @@ else:
                 window.speechSynthesis.speak(speech);
             }
 
-            // 🧠 Gemini API Function
-            function askGemini(searchTerm) {
+            // 🌐 Wikipedia API Function (No API Key Required!)
+            function askWikipedia(searchTerm) {
                 try { recognition.abort(); } catch(e) {} 
                 
-                document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🧠 Gemini is thinking...</span>";
+                document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🔍 Searching Wikipedia for: </span>" + searchTerm + "...";
 
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-                const prompt = searchTerm + " (Please give a short and concise conversational answer in 2-3 sentences max. Do not use markdown like asterisks.)";
-
-                fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                })
+                fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchTerm)}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.error) {
-                        let errMsg = "API Key Error. Please check your Gemini API key in the code.";
-                        document.getElementById("speech-live").innerText = errMsg;
-                        speakText(errMsg);
-                        return;
+                    let answer = "Sorry, I couldn't find accurate information about that.";
+                    if (data.type === "standard" || data.type === "disambiguation") {
+                        answer = data.extract; 
                     }
                     
-                    let answer = "Sorry, I couldn't process that.";
-                    if (data.candidates && data.candidates.length > 0) {
-                        answer = data.candidates[0].content.parts[0].text;
-                    }
-                    
-                    document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🤖 Gemini: </span>" + answer;
+                    document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🤖 Assistant: </span>" + answer;
                     speakText(answer); 
                 })
                 .catch(err => {
                     document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⚠️ Network Error!</span>";
-                    speakText("Sorry, there was an internet error connecting to Gemini.");
+                    speakText("Sorry, there was an internet error fetching data.");
                 });
             }
 
@@ -206,7 +188,7 @@ else:
                     if (isFinalCommand) {
                         const query = transcript.toLowerCase().trim();
                         
-                        // 🔥 Strict trigger word check:
+                        // 🔥 Strict trigger word check
                         if (query.includes("python") || query.includes("paithen")) {
                             let cleanCmd = query.replace("python", "").replace("paithen", "").replace("open", "").replace("start", "").trim();
                             
@@ -216,7 +198,7 @@ else:
                                 document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
                             }
 
-                            // 📱 ॲप लाँचर फीचर्स
+                            // 📱 ॲप लाँचर फीचर्स (फक्त पूर्ण नावे)
                             if (cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
                             else if (cleanCmd.includes("youtube")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
                             else if (cleanCmd.includes("instagram")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
@@ -225,17 +207,16 @@ else:
                             else if (cleanCmd.includes("wifi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
                             else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
                             
-                            // 🧠 चॅटबॉट सर्च (जर ॲप नसेल तर)
+                            // 🔍 चॅटबॉट सर्च (Wikipedia)
                             else if (cleanCmd.length > 1) {
                                 let searchQuery = cleanCmd.replace("search", "").replace("who is", "").replace("what is", "").replace("tell me about", "").trim();
-                                askGemini(searchQuery);
+                                askWikipedia(searchQuery);
                             }
                         }
                     }
                 };
 
                 recognition.onend = function() {
-                    // जर ॲप उघडलं नसेल आणि रोबोट बोलत नसेल, तर माईक आपोआप पुन्हा सुरू करा
                     if (!actionExecuted && !isSpeaking) {
                         setTimeout(() => { try { recognition.start(); } catch(err) {} }, 300);
                     }
