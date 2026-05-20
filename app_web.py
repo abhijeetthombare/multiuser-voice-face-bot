@@ -13,15 +13,13 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Voice Bot (Permanent Login + History)")
+st.title("🤖 Next-Gen Voice Bot (Multi-User Private AI)")
 st.write("---")
 
 # --- २. PERMANENT FACE DATABASE (कायमस्वरूपी फोल्डर) ---
-# जर फोल्डर नसेल, तर नवीन बनवा
 if not os.path.exists("registered_faces"):
     os.makedirs("registered_faces")
 
-# जुने सेव्ह केलेले चेहरे लोड करा (म्हणजे रिफ्रेश केल्यावर डिलीट होणार नाहीत)
 if 'user_db' not in st.session_state:
     st.session_state['user_db'] = {} 
     for file in os.listdir("registered_faces"):
@@ -31,7 +29,6 @@ if 'user_db' not in st.session_state:
             st.session_state['user_db'][name] = Image.open(img_path).convert('RGB')
 
 # --- ३. AUTO-LOGIN CHECK (URL Token) ---
-# जर URL मध्ये युझरचं नाव असेल, तर त्याला थेट आत घ्या!
 if 'user' in st.query_params:
     st.session_state['authenticated'] = True
     st.session_state['current_user'] = st.query_params['user']
@@ -63,7 +60,6 @@ if not st.session_state['authenticated']:
                 reg_image = Image.open(reg_cam).convert('RGB')
                 st.session_state['user_db'][reg_name] = reg_image
                 
-                # 🔥 चेहरा कायमचा सेव्ह करा (Hard Drive वर)
                 save_path = os.path.join("registered_faces", f"{reg_name}.jpg")
                 reg_image.save(save_path)
                 
@@ -104,10 +100,7 @@ if not st.session_state['authenticated']:
                         if match_found:
                             st.session_state['authenticated'] = True
                             st.session_state['current_user'] = identified_user
-                            
-                            # 🔥 URL मध्ये टोकन लावा (ऑटो-लॉगिनसाठी)
                             st.query_params["user"] = identified_user
-                            
                             st.rerun()
                         else:
                             st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})")
@@ -120,7 +113,9 @@ else:
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE SMART WIKIPEDIA ENGINE WITH HISTORY ---
+    active_user = str(st.session_state['current_user'])
+
+    # --- 🎙️ JAVASCRIPT: PRIVATE HISTORY & WIKIPEDIA ENGINE ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
         <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
@@ -131,15 +126,21 @@ else:
 
     <div id="history-container" style="background-color:#ffffff; border-radius:10px; padding:15px; max-height: 250px; overflow-y: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align:left;">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #f0f2f6; padding-bottom: 5px; margin-bottom: 10px;">
-            <h4 style="margin:0; color:#2c3e50;">📜 Search History</h4>
+            <h4 style="margin:0; color:#2c3e50;">📜 """ + active_user + """'s Search History</h4>
             <button onclick="clearHistory()" style="background:#e74c3c; color:white; border:none; border-radius:5px; padding:5px 10px; cursor:pointer; font-size:12px;">🗑️ Clear</button>
         </div>
         <div id="history-list"></div>
     </div>
 
     <script>
+        // ---------------------------------------------------------
+        // 📜 PRIVATE HISTORY LOGIC 
+        // ---------------------------------------------------------
+        const CURRENT_USER = '""" + active_user + """';
+        const HISTORY_KEY = 'abhii_bot_history_' + CURRENT_USER; // प्रत्येकाची सेपरेट की!
+
         function updateHistoryUI() {
-            let history = JSON.parse(localStorage.getItem('abhii_bot_history')) || [];
+            let history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
             let html = "";
             if (history.length === 0) {
                 html = "<p style='color:#7f8c8d; font-size:14px; text-align:center;'>No history yet. Start speaking!</p>";
@@ -147,7 +148,7 @@ else:
                 history.forEach(item => {
                     html += `
                         <div style="background:#f8f9fa; padding:10px; margin-bottom:8px; border-radius:8px; border-left: 4px solid #1f77b4;">
-                            <div style="font-weight:bold; color:#2980b9; margin-bottom:4px;">🗣️ You: ${item.query}</div>
+                            <div style="font-weight:bold; color:#2980b9; margin-bottom:4px;">🗣️ ${CURRENT_USER}: ${item.query}</div>
                             <div style="color:#444; font-size:14px;">🤖 AI: ${item.response}</div>
                         </div>`;
                 });
@@ -156,20 +157,23 @@ else:
         }
 
         function saveHistory(query, response) {
-            let history = JSON.parse(localStorage.getItem('abhii_bot_history')) || [];
+            let history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
             history.unshift({query: query, response: response}); 
             if(history.length > 30) history.pop(); 
-            localStorage.setItem('abhii_bot_history', JSON.stringify(history));
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
             updateHistoryUI();
         }
 
         function clearHistory() {
-            localStorage.removeItem('abhii_bot_history');
+            localStorage.removeItem(HISTORY_KEY);
             updateHistoryUI();
         }
 
         updateHistoryUI();
 
+        // ---------------------------------------------------------
+        // 🤖 AI & MIC LOGIC
+        // ---------------------------------------------------------
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
             document.getElementById("speech-live").innerText = "Web Speech API not supported.";
@@ -338,13 +342,11 @@ else:
 
     st.write("---")
     
-    # 🔥 हे बघ! लॉगआउट आणि लॉक बटणांचे टोकन क्लिअरिंग लॉजिक
     lock_col, logout_col = st.columns(2)
     
     with lock_col:
         if st.button("🔒 Lock System Manually", use_container_width=True):
             st.session_state['authenticated'] = False
-            # URL मधून टोकन काढा म्हणजे रिफ्रेश केल्यावर लॉक राहील
             st.query_params.clear() 
             st.rerun()
             
@@ -352,6 +354,5 @@ else:
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state['authenticated'] = False
             st.session_state['current_user'] = None 
-            # URL मधून टोकन काढा
             st.query_params.clear() 
             st.rerun()
