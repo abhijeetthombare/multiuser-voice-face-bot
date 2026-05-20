@@ -77,7 +77,7 @@ if not st.session_state['authenticated']:
                             
                             if diff_ratio < best_score:
                                 best_score = diff_ratio
-                                # 🔥 सिक्युरिटी फिक्स: 0.45 वरून 0.18 केलंय, आता फक्त अचूक चेहराच पास होईल!
+                                # 🔥 सिक्युरिटी फिक्स: 0.18 (Strict Mode)
                                 if diff_ratio < 0.18: 
                                     match_found = True
                                     identified_user = name
@@ -87,7 +87,7 @@ if not st.session_state['authenticated']:
                             st.session_state['current_user'] = identified_user
                             st.rerun()
                         else:
-                            st.error(f"❌ चेहरा ओळखता आला नाही! (सुरक्षा नकार: Distance: {round(best_score, 2)})")
+                            st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})")
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
@@ -97,7 +97,7 @@ else:
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE ULTRA-STABLE GEMINI ENGINE ---
+    # --- 🎙️ JAVASCRIPT: THE PATIENT GEMINI ENGINE ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center;">
         <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:10px;">🤖 Gemini AI: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
@@ -115,8 +115,11 @@ else:
             let isListening = false;
             let isSpeaking = false; 
             
-            // 🛑 महत्त्वाची स्टेप: इथे तुझी Gemini API Key टाक!
+            // 🔥 इथे तुझी Gemini API Key टाक!
             const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
+
+            let speechTimer = null; // 🕒 हा आहे आपला जादुई टायमर!
+            let fullSentence = "";  // 📝 इथे तुझे सगळे शब्द जमा होतील
 
             function speakText(text) {
                 window.speechSynthesis.cancel();
@@ -140,7 +143,6 @@ else:
                 window.speechSynthesis.speak(speech);
             }
 
-            // 🧠 विकिपीडिया ऐवजी आता डायरेक्ट Google Gemini AI वापरणार!
             function askGemini(searchTerm) {
                 try { recognition.abort(); } catch(e) {} 
                 
@@ -148,7 +150,6 @@ else:
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
                 
-                // रोबोटला जास्त लांब बोलायला लागू नये म्हणून आपण त्याला 2-3 ओळीत उत्तर द्यायला सांगत आहोत.
                 const prompt = searchTerm + " (Please give a short and concise answer in 2-3 sentences max.)";
 
                 fetch(url, {
@@ -186,54 +187,63 @@ else:
 
                 recognition.onresult = function(event) {
                     let interimTranscript = '';
-                    let finalTranscript = '';
-                    let isFinalCommand = false; 
+                    let finalPart = '';
 
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
                         if (event.results[i].isFinal) {
-                            finalTranscript += event.results[i][0].transcript;
-                            isFinalCommand = true; 
+                            finalPart += event.results[i][0].transcript;
                         } else {
                             interimTranscript += event.results[i][0].transcript;
                         }
                     }
 
-                    document.getElementById("speech-live").innerText = finalTranscript || interimTranscript;
-                    
-                    if (isFinalCommand) {
-                        const query = finalTranscript.toLowerCase().trim();
-                        
-                        if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
-                            let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
-                            
-                            function fireIntent(intentUrl) {
-                                actionExecuted = true; 
-                                isListening = false;
-                                window.open(intentUrl, '_blank'); 
-                                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
-                                try { recognition.abort(); } catch(e) {} 
-                            }
+                    if (finalPart) {
+                        fullSentence += " " + finalPart;
+                    }
 
-                            // 📱 ॲप लाँचर फीचर्स
-                            if (cleanCmd === "whatsapp" || cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
-                            else if (cleanCmd === "instagram" || cleanCmd.includes("insta")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
-                            else if (cleanCmd === "youtube" || cleanCmd.includes("yt")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
-                            else if (cleanCmd === "facebook" || cleanCmd.includes("fb")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
-                            else if (cleanCmd === "map" || cleanCmd.includes("maps")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
+                    let displayTxt = (fullSentence + " " + interimTranscript).trim();
+                    document.getElementById("speech-live").innerText = displayTxt;
+                    
+                    // 🕒 तू जोपर्यंत बोलतोयस तोपर्यंत टायमर रिसेट होईल
+                    clearTimeout(speechTimer);
+
+                    // 🕒 जेव्हा तू पूर्ण 1.5 सेकंद गप्प बसशील, तेव्हाच कमांड रन होईल!
+                    speechTimer = setTimeout(() => {
+                        if (fullSentence.trim().length > 0) {
+                            const query = fullSentence.toLowerCase().trim();
+                            fullSentence = ""; // पुढच्या कमांडसाठी रिकामं करा
                             
-                            // 📶 सिस्टीम हार्डवेअर
-                            else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
-                            else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) fireIntent("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
-                            else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) fireIntent("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
-                            else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
-                            
-                            // 🧠 Gemini चॅटबॉट (पूर्ण वाक्य ऐकल्यावरच सर्च मारेल!)
-                            else if (cleanCmd.length > 2) {
-                                let searchQuery = cleanCmd.replace("search", "").replace("who is", "").replace("what is", "").replace("tell me about", "").trim();
-                                askGemini(searchQuery);
+                            if (query.includes("python") || query.includes("paithen") || query.includes("py")) {
+                                let cleanCmd = query.replace("python", "").replace("paithen", "").replace("py", "").replace("open", "").replace("start", "").trim();
+                                
+                                function fireIntent(intentUrl) {
+                                    actionExecuted = true; 
+                                    isListening = false;
+                                    window.open(intentUrl, '_blank'); 
+                                    document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
+                                    try { recognition.abort(); } catch(e) {} 
+                                }
+
+                                if (cleanCmd === "whatsapp" || cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
+                                else if (cleanCmd === "instagram" || cleanCmd.includes("insta")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
+                                else if (cleanCmd === "youtube" || cleanCmd.includes("yt")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
+                                else if (cleanCmd === "facebook" || cleanCmd.includes("fb")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end");
+                                else if (cleanCmd === "map" || cleanCmd.includes("maps")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end");
+                                
+                                else if (cleanCmd.includes("wifi") || cleanCmd.includes("wi-fi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end");
+                                else if (cleanCmd.includes("data") || cleanCmd.includes("internet")) fireIntent("intent:#Intent;action=android.settings.DATA_ROAMING_SETTINGS;end");
+                                else if (cleanCmd.includes("location") || cleanCmd.includes("gps")) fireIntent("intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end");
+                                else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end");
+                                
+                                else if (cleanCmd.length > 2) {
+                                    let searchQuery = cleanCmd.replace("search", "").replace("who is", "").replace("what is", "").replace("tell me about", "").trim();
+                                    if(searchQuery.length > 1 && searchQuery !== "who") {
+                                        askGemini(searchQuery);
+                                    }
+                                }
                             }
                         }
-                    }
+                    }, 1500); // 🕒 १.५ सेकंद वाट पाहणार!
                 };
 
                 recognition.onend = function() {
