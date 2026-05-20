@@ -115,7 +115,7 @@ else:
             let isSpeaking = false; 
             
             // 🛑 महत्त्वाची स्टेप: इथे तुझी Gemini API Key टाक!
-            const GEMINI_API_KEY = "AIzaSyBSzMJouB6JtzZCE_mx8ZsdoR-_UXIVwLc"; // 🔥 SECURITY ALERT: Never expose
+            const GEMINI_API_KEY = "AIzaSyCDvwYO1Aw8JE6SXtRfD5mvuTMttIL1eKU"; // 🔥 SECURITY ALERT: Never expose
 
             // 🗣️ Text-to-Speech Function
             function speakText(text) {
