@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Voice Bot (Multi-User Private AI)")
+st.title("🤖 Next-Gen Voice Bot (Multi-Language AI)")
 st.write("---")
 
 # --- २. PERMANENT FACE DATABASE (कायमस्वरूपी फोल्डर) ---
@@ -111,12 +111,22 @@ if not st.session_state['authenticated']:
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}! (Your session is permanently active)")
     
+    # 🔥 लँग्वेज सिलेक्टर (येथून तू भाषा बदलू शकतोस)
+    lang_choice = st.radio("🗣️ Choose Bot Language / भाषा निवडा:", ["English", "मराठी", "हिंदी"], horizontal=True)
+    
+    lang_map = {
+        "English": ("en-IN", "en"),
+        "मराठी": ("mr-IN", "mr"),
+        "हिंदी": ("hi-IN", "hi")
+    }
+    stt_lang, wiki_lang = lang_map[lang_choice]
+
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
     active_user = str(st.session_state['current_user'])
 
-    # --- 🎙️ JAVASCRIPT: PRIVATE HISTORY & WIKIPEDIA ENGINE ---
-    js_stable_engine = """
+    # --- 🎙️ JAVASCRIPT: PRIVATE HISTORY & MULTI-LINGUAL WIKIPEDIA ENGINE ---
+    js_template = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
         <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
         
@@ -126,18 +136,17 @@ else:
 
     <div id="history-container" style="background-color:#ffffff; border-radius:10px; padding:15px; max-height: 250px; overflow-y: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align:left;">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #f0f2f6; padding-bottom: 5px; margin-bottom: 10px;">
-            <h4 style="margin:0; color:#2c3e50;">📜 """ + active_user + """'s Search History</h4>
+            <h4 style="margin:0; color:#2c3e50;">📜 USER_NAME's Search History</h4>
             <button onclick="clearHistory()" style="background:#e74c3c; color:white; border:none; border-radius:5px; padding:5px 10px; cursor:pointer; font-size:12px;">🗑️ Clear</button>
         </div>
         <div id="history-list"></div>
     </div>
 
     <script>
-        // ---------------------------------------------------------
-        // 📜 PRIVATE HISTORY LOGIC 
-        // ---------------------------------------------------------
-        const CURRENT_USER = '""" + active_user + """';
-        const HISTORY_KEY = 'abhii_bot_history_' + CURRENT_USER; // प्रत्येकाची सेपरेट की!
+        const CURRENT_USER = 'USER_NAME';
+        const HISTORY_KEY = 'abhii_bot_history_' + CURRENT_USER; 
+        const STT_LANG = 'LANG_STT';
+        const WIKI_LANG = 'LANG_WIKI';
 
         function updateHistoryUI() {
             let history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
@@ -171,9 +180,6 @@ else:
 
         updateHistoryUI();
 
-        // ---------------------------------------------------------
-        // 🤖 AI & MIC LOGIC
-        // ---------------------------------------------------------
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
             document.getElementById("speech-live").innerText = "Web Speech API not supported.";
@@ -190,7 +196,7 @@ else:
                 
                 let cleanTextForSpeech = text.replace(/[*#]/g, ''); 
                 let speech = new SpeechSynthesisUtterance(cleanTextForSpeech);
-                speech.lang = 'en-IN'; 
+                speech.lang = STT_LANG; // 🔥 भाषा डायनॅमिकली सेट होईल!
                 speech.rate = 1.0; 
                 
                 speech.onstart = function() {
@@ -218,7 +224,8 @@ else:
                 
                 document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🔍 Searching Wikipedia for: </span>" + searchTerm + "...";
 
-                fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${formattedTerm}`)
+                // 🔥 विकिपीडियाची भाषा डायनॅमिकली सेट होईल (en, mr, hi)
+                fetch(`https://${WIKI_LANG}.wikipedia.org/api/rest_v1/page/summary/${formattedTerm}`)
                 .then(response => {
                     if (!response.ok) throw new Error("Not Found");
                     return response.json();
@@ -234,7 +241,7 @@ else:
                     speakText(answer); 
                 })
                 .catch(err => {
-                    let errMsg = "Sorry, Wikipedia couldn't find a direct page for '" + searchTerm + "'.";
+                    let errMsg = "Sorry, information not found for '" + searchTerm + "'. Try speaking just the name clearly.";
                     document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⚠️ </span>" + errMsg;
                     saveHistory(searchTerm, errMsg); 
                     speakText(errMsg);
@@ -248,7 +255,7 @@ else:
                 recognition = new SpeechRecognition();
                 recognition.continuous = false; 
                 recognition.interimResults = true;
-                recognition.lang = 'en-US';
+                recognition.lang = STT_LANG; // 🔥 माईकची भाषा डायनॅमिकली सेट होईल!
 
                 recognition.onresult = function(event) {
                     if (isSpeaking) return; 
@@ -268,8 +275,9 @@ else:
                     if (isFinalCommand) {
                         const query = transcript.toLowerCase().trim();
                         
-                        if (query.includes("python") || query.includes("paithen")) {
-                            let cleanCmd = query.replace("python", "").replace("paithen", "").replace("open", "").replace("start", "").trim();
+                        // 🔥 मराठी आणि हिंदी शब्दांचा सपोर्ट!
+                        if (query.includes("python") || query.includes("paithen") || query.includes("पायथन") || query.includes("पायथॉन")) {
+                            let cleanCmd = query.replace(/python|paithen|open|start|पायथन|पायथॉन|उघडा|चालू करा/g, "").trim();
                             
                             function fireIntent(intentUrl, appName) {
                                 actionExecuted = true; 
@@ -278,16 +286,16 @@ else:
                                 document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
                             }
 
-                            if (cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end", "WhatsApp");
-                            else if (cleanCmd.includes("youtube")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end", "YouTube");
-                            else if (cleanCmd.includes("instagram")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end", "Instagram");
-                            else if (cleanCmd.includes("facebook")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end", "Facebook");
-                            else if (cleanCmd.includes("map") || cleanCmd.includes("maps")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end", "Google Maps");
-                            else if (cleanCmd.includes("wifi")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end", "WiFi Settings");
-                            else if (cleanCmd.includes("bluetooth")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end", "Bluetooth Settings");
+                            if (cleanCmd.includes("whatsapp") || cleanCmd.includes("व्हॉट्सॲप")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end", "WhatsApp");
+                            else if (cleanCmd.includes("youtube") || cleanCmd.includes("यूट्यूब")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end", "YouTube");
+                            else if (cleanCmd.includes("instagram") || cleanCmd.includes("इन्स्टाग्राम")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end", "Instagram");
+                            else if (cleanCmd.includes("facebook") || cleanCmd.includes("फेसबुक")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end", "Facebook");
+                            else if (cleanCmd.includes("map") || cleanCmd.includes("maps") || cleanCmd.includes("मॅप्स")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end", "Google Maps");
+                            else if (cleanCmd.includes("wifi") || cleanCmd.includes("वायफाय")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end", "WiFi Settings");
+                            else if (cleanCmd.includes("bluetooth") || cleanCmd.includes("ब्लूटूथ")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end", "Bluetooth Settings");
                             
                             else if (cleanCmd.length > 1) {
-                                let searchQuery = cleanCmd.replace("search", "").replace("who is", "").replace("what is", "").replace("tell me about", "").trim();
+                                let searchQuery = cleanCmd.replace(/search|who is|what is|tell me about|शोध|कोण आहे|माहिती सांग/g, "").trim();
                                 askWikipedia(searchQuery);
                             }
                         }
@@ -338,7 +346,11 @@ else:
         }
     </script>
     """
-    components.html(js_stable_engine, height=600)
+    
+    # 🔥 व्हेरिएबल्स डायनॅमिकली रिप्लेस करा
+    js_final = js_template.replace("USER_NAME", active_user).replace("LANG_STT", stt_lang).replace("LANG_WIKI", wiki_lang)
+    
+    components.html(js_final, height=600)
 
     st.write("---")
     
