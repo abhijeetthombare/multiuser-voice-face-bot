@@ -77,7 +77,6 @@ if not st.session_state['authenticated']:
                             
                             if diff_ratio < best_score:
                                 best_score = diff_ratio
-                                # 🔥 सिक्युरिटी फिक्स: 0.18 (Strict Mode)
                                 if diff_ratio < 0.18: 
                                     match_found = True
                                     identified_user = name
@@ -97,7 +96,7 @@ else:
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE ECHO-FREE WIKIPEDIA ENGINE ---
+    # --- 🎙️ JAVASCRIPT: THE SMART WIKIPEDIA ENGINE ---
     js_stable_engine = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center;">
         <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:10px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
@@ -114,7 +113,6 @@ else:
             let actionExecuted = false; 
             let isSpeaking = false; 
 
-            // 🗣️ Text-to-Speech Function
             function speakText(text) {
                 window.speechSynthesis.cancel();
                 isSpeaking = true;
@@ -139,35 +137,40 @@ else:
                 window.speechSynthesis.speak(speech);
             }
 
-            // 🌐 Wikipedia API Function (No API Key Required!)
+            // 🌐 SMART Wikipedia API Function
             function askWikipedia(searchTerm) {
                 try { recognition.abort(); } catch(e) {} 
                 
+                // 🔥 THE FIX: "shivaji maharaj" ला "Shivaji_Maharaj" मध्ये कनवर्ट करा!
+                let formattedTerm = searchTerm.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('_');
+                
                 document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🔍 Searching Wikipedia for: </span>" + searchTerm + "...";
 
-                fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchTerm)}`)
-                .then(response => response.json())
+                fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${formattedTerm}`)
+                .then(response => {
+                    if (!response.ok) throw new Error("Not Found");
+                    return response.json();
+                })
                 .then(data => {
                     let answer = "Sorry, I couldn't find accurate information about that.";
                     if (data.type === "standard" || data.type === "disambiguation") {
                         answer = data.extract; 
                     }
                     
-                    document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🤖 Assistant: </span>" + answer;
+                    document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>💬 </span>" + answer;
                     speakText(answer); 
                 })
                 .catch(err => {
-                    document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⚠️ Network Error!</span>";
-                    speakText("Sorry, there was an internet error fetching data.");
+                    let errMsg = "Sorry, Wikipedia couldn't find a direct page for '" + searchTerm + "'. Try speaking just the name clearly.";
+                    document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⚠️ </span>" + errMsg;
+                    speakText(errMsg);
                 });
             }
 
-            // 🎤 Main Mic Function
             function startFreshMic() {
                 if (recognition) { try { recognition.abort(); } catch(e) {} }
 
                 recognition = new SpeechRecognition();
-                // 🔥 THE ONE-TIME FIX: continuous = false केल्यावर Android डुप्लिकेशन करणार नाही!
                 recognition.continuous = false; 
                 recognition.interimResults = true;
                 recognition.lang = 'en-US';
@@ -188,7 +191,6 @@ else:
                     if (isFinalCommand) {
                         const query = transcript.toLowerCase().trim();
                         
-                        // 🔥 Strict trigger word check
                         if (query.includes("python") || query.includes("paithen")) {
                             let cleanCmd = query.replace("python", "").replace("paithen", "").replace("open", "").replace("start", "").trim();
                             
@@ -198,7 +200,6 @@ else:
                                 document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
                             }
 
-                            // 📱 ॲप लाँचर फीचर्स (फक्त पूर्ण नावे)
                             if (cleanCmd.includes("whatsapp")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end");
                             else if (cleanCmd.includes("youtube")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end");
                             else if (cleanCmd.includes("instagram")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end");
@@ -225,7 +226,6 @@ else:
                 try { recognition.start(); } catch(e) {}
             }
 
-            // 🛡️ Watchdog Timer
             setInterval(() => {
                 if (!actionExecuted && !isSpeaking && recognition) {
                     try { recognition.start(); } catch(e) {}
