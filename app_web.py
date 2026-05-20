@@ -115,26 +115,35 @@ else:
             let actionExecuted = false; 
             let isSpeaking = false; 
 
-            // 🗣️ Text-to-Speech Function
+            // 🗣️ Text-to-Speech Function (Feedback Loop Fixed)
             function speakText(text) {
+                // १. आधी जुना आवाज बंद करा
                 window.speechSynthesis.cancel();
                 isSpeaking = true;
                 
-                let cleanTextForSpeech = text.replace(/[*#]/g, ''); 
+                // २. 🔥 सर्वात महत्वाचे: रोबोट बोलण्यापूर्वी माईक सक्तीने बंद करा (Kill Mic)
+                if (recognition) { try { recognition.abort(); } catch(e) {} }
                 
+                let cleanTextForSpeech = text.replace(/[*#]/g, ''); 
                 let speech = new SpeechSynthesisUtterance(cleanTextForSpeech);
                 speech.lang = 'en-IN'; 
                 speech.rate = 1.0; 
                 
+                // ३. रोबोट बोलू लागल्यावर पुन्हा एकदा कन्फर्म करा की माईक बंदच आहे
+                speech.onstart = function() {
+                    if (recognition) { try { recognition.abort(); } catch(e) {} }
+                };
+
+                // ४. रोबोट बोलून थांबला की अर्ध्या सेकंदानंतरच माईक पुन्हा सुरू करा
                 speech.onend = function() {
                     isSpeaking = false;
                     document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is listening again...</span>";
-                    setTimeout(startFreshMic, 500); 
+                    setTimeout(startFreshMic, 800); // 800ms चा पॉज दिलाय, जेणेकरून इको येऊ नये
                 };
 
                 speech.onerror = function() {
                     isSpeaking = false;
-                    setTimeout(startFreshMic, 500);
+                    setTimeout(startFreshMic, 800);
                 };
                 
                 window.speechSynthesis.speak(speech);
@@ -142,7 +151,8 @@ else:
 
             // 🌐 SMART Wikipedia API Function
             function askWikipedia(searchTerm) {
-                try { recognition.abort(); } catch(e) {} 
+                // सर्चला जातानाही माईक बंद करा
+                if (recognition) { try { recognition.abort(); } catch(e) {} } 
                 
                 let formattedTerm = searchTerm.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('_');
                 
@@ -160,7 +170,7 @@ else:
                     }
                     
                     document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>💬 </span>" + answer;
-                    speakText(answer); 
+                    speakText(answer); // बोलण्यासाठी पाठवा
                 })
                 .catch(err => {
                     let errMsg = "Sorry, Wikipedia couldn't find a direct page for '" + searchTerm + "'. Try speaking just the name clearly.";
@@ -171,6 +181,9 @@ else:
 
             // 🎤 Main Mic Function
             function startFreshMic() {
+                // जर रोबोट बोलत असेल, तर माईक चुकूनही चालू करू नका!
+                if (isSpeaking) return;
+
                 if (recognition) { try { recognition.abort(); } catch(e) {} }
 
                 recognition = new SpeechRecognition();
@@ -179,6 +192,8 @@ else:
                 recognition.lang = 'en-US';
 
                 recognition.onresult = function(event) {
+                    if (isSpeaking) return; // जर मध्येच बोलणं सुरू झालं, तर ऐकलेलं विसरून जा
+
                     let transcript = "";
                     let isFinalCommand = false;
 
@@ -228,13 +243,12 @@ else:
                 try { recognition.start(); } catch(e) {}
             }
 
-            // 🔥 नवीन रिफ्रेश बटण लॉजिक (ह्याने आवाज पण अनलॉक होईल!)
+            // 🔥 नवीन रिफ्रेश बटण लॉजिक 
             document.getElementById("refresh-btn").addEventListener("click", function() {
                 actionExecuted = false;
                 isSpeaking = false;
-                window.speechSynthesis.cancel(); // जुना अडकलेला आवाज क्लिअर करा
+                window.speechSynthesis.cancel(); 
                 
-                // ब्राउझरला वाटेल की युझरने 'ऑडिओ' चालवायला परवानगी दिली आहे
                 let unlockSpeech = new SpeechSynthesisUtterance('');
                 window.speechSynthesis.speak(unlockSpeech);
 
