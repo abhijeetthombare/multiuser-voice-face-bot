@@ -96,10 +96,10 @@ else:
     
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    # --- 🎙️ JAVASCRIPT: THE SMART WIKIPEDIA ENGINE WITH REFRESH BUTTON ---
+    # --- 🎙️ JAVASCRIPT: THE SMART WIKIPEDIA ENGINE WITH SCROLLBAR ---
     js_stable_engine = """
-    <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center;">
-        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
+    <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center; max-height: 400px; overflow-y: auto; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
+        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px; position: sticky; top: 0; background-color: #f0f2f6; padding-bottom: 5px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
         
         <button id="refresh-btn" style="width:100%; padding:12px; background-color:#f39c12; color:white; font-size:16px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom:10px;">🔄 Refresh / Wake Up Voice</button>
 
@@ -117,11 +117,9 @@ else:
 
             // 🗣️ Text-to-Speech Function (Feedback Loop Fixed)
             function speakText(text) {
-                // १. आधी जुना आवाज बंद करा
                 window.speechSynthesis.cancel();
                 isSpeaking = true;
                 
-                // २. 🔥 सर्वात महत्वाचे: रोबोट बोलण्यापूर्वी माईक सक्तीने बंद करा (Kill Mic)
                 if (recognition) { try { recognition.abort(); } catch(e) {} }
                 
                 let cleanTextForSpeech = text.replace(/[*#]/g, ''); 
@@ -129,16 +127,14 @@ else:
                 speech.lang = 'en-IN'; 
                 speech.rate = 1.0; 
                 
-                // ३. रोबोट बोलू लागल्यावर पुन्हा एकदा कन्फर्म करा की माईक बंदच आहे
                 speech.onstart = function() {
                     if (recognition) { try { recognition.abort(); } catch(e) {} }
                 };
 
-                // ४. रोबोट बोलून थांबला की अर्ध्या सेकंदानंतरच माईक पुन्हा सुरू करा
                 speech.onend = function() {
                     isSpeaking = false;
                     document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is listening again...</span>";
-                    setTimeout(startFreshMic, 800); // 800ms चा पॉज दिलाय, जेणेकरून इको येऊ नये
+                    setTimeout(startFreshMic, 800); 
                 };
 
                 speech.onerror = function() {
@@ -151,7 +147,6 @@ else:
 
             // 🌐 SMART Wikipedia API Function
             function askWikipedia(searchTerm) {
-                // सर्चला जातानाही माईक बंद करा
                 if (recognition) { try { recognition.abort(); } catch(e) {} } 
                 
                 let formattedTerm = searchTerm.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('_');
@@ -170,7 +165,7 @@ else:
                     }
                     
                     document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>💬 </span>" + answer;
-                    speakText(answer); // बोलण्यासाठी पाठवा
+                    speakText(answer); 
                 })
                 .catch(err => {
                     let errMsg = "Sorry, Wikipedia couldn't find a direct page for '" + searchTerm + "'. Try speaking just the name clearly.";
@@ -181,7 +176,6 @@ else:
 
             // 🎤 Main Mic Function
             function startFreshMic() {
-                // जर रोबोट बोलत असेल, तर माईक चुकूनही चालू करू नका!
                 if (isSpeaking) return;
 
                 if (recognition) { try { recognition.abort(); } catch(e) {} }
@@ -192,7 +186,7 @@ else:
                 recognition.lang = 'en-US';
 
                 recognition.onresult = function(event) {
-                    if (isSpeaking) return; // जर मध्येच बोलणं सुरू झालं, तर ऐकलेलं विसरून जा
+                    if (isSpeaking) return; 
 
                     let transcript = "";
                     let isFinalCommand = false;
@@ -279,7 +273,8 @@ else:
         }
     </script>
     """
-    components.html(js_stable_engine, height=260)
+    # 🔥 Iframe ची उंची 260 वरून 450 केली आहे, जेणेकरून स्क्रोल करायला जागा मिळेल!
+    components.html(js_stable_engine, height=450)
 
     st.write("---")
     if st.button("🛑 Lock System Manually", use_container_width=True):
