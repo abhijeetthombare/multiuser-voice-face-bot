@@ -111,13 +111,12 @@ if not st.session_state['authenticated']:
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}! (Your session is permanently active)")
     
-    # 🔥 लँग्वेज सिलेक्टर (येथून तू भाषा बदलू शकतोस)
-    lang_choice = st.radio("🗣️ Choose Bot Language / भाषा निवडा:", ["English", "मराठी", "हिंदी"], horizontal=True)
+    # 🔥 लँग्वेज सिलेक्टर (हिंदी उडवले)
+    lang_choice = st.radio("🗣️ Choose Bot Language / भाषा निवडा:", ["English", "मराठी"], horizontal=True)
     
     lang_map = {
         "English": ("en-IN", "en"),
-        "मराठी": ("mr-IN", "mr"),
-        "हिंदी": ("hi-IN", "hi")
+        "मराठी": ("mr-IN", "mr")
     }
     stt_lang, wiki_lang = lang_map[lang_choice]
 
@@ -196,7 +195,7 @@ else:
                 
                 let cleanTextForSpeech = text.replace(/[*#]/g, ''); 
                 let speech = new SpeechSynthesisUtterance(cleanTextForSpeech);
-                speech.lang = STT_LANG; // 🔥 भाषा डायनॅमिकली सेट होईल!
+                speech.lang = STT_LANG; 
                 speech.rate = 1.0; 
                 
                 speech.onstart = function() {
@@ -224,7 +223,6 @@ else:
                 
                 document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🔍 Searching Wikipedia for: </span>" + searchTerm + "...";
 
-                // 🔥 विकिपीडियाची भाषा डायनॅमिकली सेट होईल (en, mr, hi)
                 fetch(`https://${WIKI_LANG}.wikipedia.org/api/rest_v1/page/summary/${formattedTerm}`)
                 .then(response => {
                     if (!response.ok) throw new Error("Not Found");
@@ -255,7 +253,7 @@ else:
                 recognition = new SpeechRecognition();
                 recognition.continuous = false; 
                 recognition.interimResults = true;
-                recognition.lang = STT_LANG; // 🔥 माईकची भाषा डायनॅमिकली सेट होईल!
+                recognition.lang = STT_LANG; 
 
                 recognition.onresult = function(event) {
                     if (isSpeaking) return; 
@@ -275,7 +273,6 @@ else:
                     if (isFinalCommand) {
                         const query = transcript.toLowerCase().trim();
                         
-                        // 🔥 मराठी आणि हिंदी शब्दांचा सपोर्ट!
                         if (query.includes("python") || query.includes("paithen") || query.includes("पायथन") || query.includes("पायथॉन")) {
                             let cleanCmd = query.replace(/python|paithen|open|start|पायथन|पायथॉन|उघडा|चालू करा/g, "").trim();
                             
@@ -347,7 +344,6 @@ else:
     </script>
     """
     
-    # 🔥 व्हेरिएबल्स डायनॅमिकली रिप्लेस करा
     js_final = js_template.replace("USER_NAME", active_user).replace("LANG_STT", stt_lang).replace("LANG_WIKI", wiki_lang)
     
     components.html(js_final, height=600)
