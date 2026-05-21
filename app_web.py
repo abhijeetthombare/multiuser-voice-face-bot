@@ -160,9 +160,7 @@ else:
     </div>
 
     <script>
-        // 🔥 इथे तुझी नवीन API Key टाक! 
-        const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
-        
+        const GEMINI_API_KEY = "AIzaSyD69OJG4T2pfwHDcpvTlI-SQsm8y3B2yqs"; 
         const CURRENT_USER = 'USER_NAME';
         const HISTORY_KEY = 'abhii_bot_history_' + CURRENT_USER; 
         const STT_LANG = 'LANG_STT';
@@ -205,16 +203,6 @@ else:
         let isSpeaking = false; 
         let isListening = false; 
 
-        function safeStartMic() {
-            if (!isListening && !isSpeaking && !actionExecuted && recognition) {
-                try {
-                    recognition.start();
-                } catch (e) {
-                    console.log("Mic already running or blocked:", e);
-                }
-            }
-        }
-
         function speakText(text) {
             window.speechSynthesis.cancel();
             isSpeaking = true;
@@ -232,12 +220,20 @@ else:
             speech.onend = function() {
                 isSpeaking = false;
                 document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is listening again...</span>";
-                setTimeout(safeStartMic, 800); 
+                setTimeout(() => {
+                    if(!isListening && !isSpeaking && !actionExecuted) {
+                        try { recognition.start(); } catch(e) {}
+                    }
+                }, 800); 
             };
             
             speech.onerror = function() {
                 isSpeaking = false;
-                setTimeout(safeStartMic, 800);
+                setTimeout(() => {
+                    if(!isListening && !isSpeaking && !actionExecuted) {
+                        try { recognition.start(); } catch(e) {}
+                    }
+                }, 800);
             };
             window.speechSynthesis.speak(speech);
         }
@@ -295,19 +291,20 @@ else:
         });
 
         function startFreshMic() {
-            if (isSpeaking) return;
+            if (isSpeaking || actionExecuted) return;
             if (recognition) { try { recognition.abort(); } catch(e) {} }
 
             if (!SpeechRecognition) return;
 
             recognition = new SpeechRecognition();
-            // 🔥 BLINKING FIX: इथे आता continuous = true केलंय म्हणजे माईक सतत चालू राहील!
+            // 🔥 माईक सतत ऑन राहील, ब्लिंकिंग होणार नाही!
             recognition.continuous = true; 
             recognition.interimResults = true;
             recognition.lang = STT_LANG; 
 
             recognition.onstart = function() {
                 isListening = true;
+                document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is Active! Speak now...</span>";
             };
 
             recognition.onresult = function(event) {
@@ -316,7 +313,7 @@ else:
                 let currentTranscript = "";
                 let isFinalCommand = false;
                 
-                // 🔥 Android Echo Bug Fix: फक्त नवीन शब्दच घ्या
+                // Android Echo Bug पूर्णपणे फिक्स
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     currentTranscript += event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
@@ -324,7 +321,9 @@ else:
                     }
                 }
                 
-                document.getElementById("speech-live").innerText = currentTranscript;
+                if (currentTranscript.trim() !== "") {
+                    document.getElementById("speech-live").innerText = currentTranscript;
+                }
                 
                 if (isFinalCommand && currentTranscript.trim() !== "") {
                     const query = currentTranscript.toLowerCase().trim();
@@ -332,6 +331,7 @@ else:
                         let cleanCmd = query.replace(/python|paithen|open|start|पायथन|पायथॉन|उघडा|चालू करा/g, "").trim();
                         function fireIntent(intentUrl, appName) {
                             actionExecuted = true; 
+                            if (recognition) { try { recognition.abort(); } catch(e) {} }
                             saveHistory(query, `Opened ${appName} App ⚡`); 
                             window.open(intentUrl, '_blank'); 
                             document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
@@ -351,14 +351,19 @@ else:
                 }
             };
 
+            // 🔥 फायनल ब्लिंकिंग फिक्स: ७००ms चा संथ गॅप देऊन शांतपणे रीस्टार्ट करा
             recognition.onend = function() {
                 isListening = false;
                 if (!actionExecuted && !isSpeaking) {
-                    setTimeout(safeStartMic, 500); 
+                    setTimeout(() => {
+                        if(!isListening && !isSpeaking && !actionExecuted) {
+                            try { recognition.start(); } catch(e) {}
+                        }
+                    }, 700); 
                 }
             };
             
-            safeStartMic();
+            try { recognition.start(); } catch(e) {}
         }
 
         document.getElementById("refresh-btn").addEventListener("click", function() {
@@ -372,12 +377,6 @@ else:
             document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>🔄 Refreshed! Voice Unlocked. Speak now...</span>";
             setTimeout(startFreshMic, 500); 
         });
-
-        setInterval(() => {
-            if (!actionExecuted && !isSpeaking && !isListening) {
-                safeStartMic();
-            }
-        }, 4000);
 
         document.addEventListener("visibilitychange", function() {
             if (document.visibilityState === "visible" && actionExecuted === true) {
