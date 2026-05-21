@@ -137,10 +137,10 @@ else:
     lang_map = { "English": "en-IN", "मराठी": "mr-IN" }
     stt_lang = lang_map[lang_choice]
 
-    # --- 🎙️ JAVASCRIPT: GEMINI CHATBOT ENGINE (TEXT + VOICE) ---
+    # --- 🎙️ JAVASCRIPT: GEMINI CHATBOT ENGINE (NO-BLINK + REALTIME TRIGER) ---
     js_template = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
-        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 Gemini Chat AI: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
+        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 Gemini Chat AI: <span id="speech-live" style="color:#333; font-weight:normal;">Listening steadily without blinking...</span></p>
         
         <div style="display: flex; gap: 10px; margin-bottom: 15px;">
             <input type="text" id="text-input" placeholder="येथे टाईप करा किंवा बोला..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size:16px;">
@@ -160,7 +160,8 @@ else:
     </div>
 
     <script>
-        const GEMINI_API_KEY = "AIzaSyD69OJG4T2pfwHDcpvTlI-SQsm8y3B2yqs"; 
+        const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
+        
         const CURRENT_USER = 'USER_NAME';
         const HISTORY_KEY = 'abhii_bot_history_' + CURRENT_USER; 
         const STT_LANG = 'LANG_STT';
@@ -201,12 +202,24 @@ else:
         let recognition;
         let actionExecuted = false; 
         let isSpeaking = false; 
-        let isListening = false; 
+        let isListening = false;
+        let speechTimeout; // 🔥 बोलणं संपल्यावर वेळ मोजण्यासाठी टायमर
+
+        function safeStartMic() {
+            if (!isListening && !isSpeaking && !actionExecuted && recognition) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log("Mic already running:", e);
+                }
+            }
+        }
 
         function speakText(text) {
             window.speechSynthesis.cancel();
             isSpeaking = true;
             if (recognition) { try { recognition.abort(); } catch(e) {} }
+            
             let cleanTextForSpeech = text.replace(/[*#]/g, ''); 
             let speech = new SpeechSynthesisUtterance(cleanTextForSpeech);
             speech.lang = STT_LANG; 
@@ -214,26 +227,17 @@ else:
             
             speech.onstart = function() {
                 isSpeaking = true;
-                if (recognition) { try { recognition.abort(); } catch(e) {} }
             };
             
             speech.onend = function() {
                 isSpeaking = false;
                 document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is listening again...</span>";
-                setTimeout(() => {
-                    if(!isListening && !isSpeaking && !actionExecuted) {
-                        try { recognition.start(); } catch(e) {}
-                    }
-                }, 800); 
+                setTimeout(safeStartMic, 600); 
             };
             
             speech.onerror = function() {
                 isSpeaking = false;
-                setTimeout(() => {
-                    if(!isListening && !isSpeaking && !actionExecuted) {
-                        try { recognition.start(); } catch(e) {}
-                    }
-                }, 800);
+                setTimeout(safeStartMic, 600);
             };
             window.speechSynthesis.speak(speech);
         }
@@ -256,8 +260,6 @@ else:
                 if (data.error) {
                     let errMsg = "API Key Error. Please put a valid Gemini API Key.";
                     document.getElementById("speech-live").innerText = errMsg;
-                    saveHistory(searchTerm, errMsg);
-                    speakText("API key error.");
                     return;
                 }
                 let answer = "Sorry, I didn't get that.";
@@ -269,10 +271,7 @@ else:
                 speakText(answer); 
             })
             .catch(err => {
-                let errMsg = "Network error connecting to Gemini.";
-                document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⚠️ </span>" + errMsg;
-                saveHistory(searchTerm, errMsg); 
-                speakText(errMsg);
+                document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⚠️ Network Error!</span>";
             });
         }
 
@@ -290,6 +289,33 @@ else:
             }
         });
 
+        // 🔥 फायनल रिअल-टाइम व्हॉइस प्रोसेसिंग सिस्टीम
+        function processVoiceInput(finalTranscript) {
+            const query = finalTranscript.toLowerCase().trim();
+            if (query.includes("python") || query.includes("paithen") || query.includes("पायथन") || query.includes("पायथॉन")) {
+                let cleanCmd = query.replace(/python|paithen|open|start|पायथन|पायथॉन|उघडा|चालू करा/g, "").trim();
+                
+                function fireIntent(intentUrl, appName) {
+                    actionExecuted = true; 
+                    if (recognition) { try { recognition.abort(); } catch(e) {} }
+                    saveHistory(query, `Opened ${appName} App ⚡`); 
+                    window.open(intentUrl, '_blank'); 
+                    document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
+                }
+                
+                if (cleanCmd.includes("whatsapp") || cleanCmd.includes("व्हॉट्सॲप")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end", "WhatsApp");
+                else if (cleanCmd.includes("youtube") || cleanCmd.includes("यूट्यूब")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end", "YouTube");
+                else if (cleanCmd.includes("instagram") || cleanCmd.includes("इन्स्टाग्राम")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end", "Instagram");
+                else if (cleanCmd.includes("facebook") || cleanCmd.includes("फेसबुक")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end", "Facebook");
+                else if (cleanCmd.includes("map") || cleanCmd.includes("maps") || cleanCmd.includes("मॅप्स")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end", "Google Maps");
+                else if (cleanCmd.includes("wifi") || cleanCmd.includes("वायफाय")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end", "WiFi Settings");
+                else if (cleanCmd.includes("bluetooth") || cleanCmd.includes("ब्लूटूथ")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end", "Bluetooth Settings");
+                else if (cleanCmd.length > 1) {
+                    askGeminiChat(cleanCmd.trim());
+                }
+            }
+        }
+
         function startFreshMic() {
             if (isSpeaking || actionExecuted) return;
             if (recognition) { try { recognition.abort(); } catch(e) {} }
@@ -297,85 +323,56 @@ else:
             if (!SpeechRecognition) return;
 
             recognition = new SpeechRecognition();
-            // 🔥 माईक सतत ऑन राहील, ब्लिंकिंग होणार नाही!
+            // 🔥 माईक सतत सुरू ठेवलाय, ब्लिंकिंग पूर्ण बंद!
             recognition.continuous = true; 
-            recognition.interimResults = true;
+            recognition.interimResults = true; 
             recognition.lang = STT_LANG; 
 
             recognition.onstart = function() {
                 isListening = true;
-                document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is Active! Speak now...</span>";
+                document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI Listening (No-Blink)... Speak now</span>";
             };
 
             recognition.onresult = function(event) {
                 if (isSpeaking) return; 
                 
-                let currentTranscript = "";
-                let isFinalCommand = false;
-                
-                // Android Echo Bug पूर्णपणे फिक्स
+                let interimTranscript = "";
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    currentTranscript += event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        isFinalCommand = true;
-                    }
+                    interimTranscript += event.results[i][0].transcript;
                 }
                 
-                if (currentTranscript.trim() !== "") {
-                    document.getElementById("speech-live").innerText = currentTranscript;
-                }
-                
-                if (isFinalCommand && currentTranscript.trim() !== "") {
-                    const query = currentTranscript.toLowerCase().trim();
-                    if (query.includes("python") || query.includes("paithen") || query.includes("पायथन") || query.includes("पायथॉन")) {
-                        let cleanCmd = query.replace(/python|paithen|open|start|पायथन|पायथॉन|उघडा|चालू करा/g, "").trim();
-                        function fireIntent(intentUrl, appName) {
-                            actionExecuted = true; 
-                            if (recognition) { try { recognition.abort(); } catch(e) {} }
-                            saveHistory(query, `Opened ${appName} App ⚡`); 
-                            window.open(intentUrl, '_blank'); 
-                            document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
-                        }
-                        if (cleanCmd.includes("whatsapp") || cleanCmd.includes("व्हॉट्सॲप")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end", "WhatsApp");
-                        else if (cleanCmd.includes("youtube") || cleanCmd.includes("यूट्यूब")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end", "YouTube");
-                        else if (cleanCmd.includes("instagram") || cleanCmd.includes("इन्स्टाग्राम")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end", "Instagram");
-                        else if (cleanCmd.includes("facebook") || cleanCmd.includes("फेसबुक")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end", "Facebook");
-                        else if (cleanCmd.includes("map") || cleanCmd.includes("maps") || cleanCmd.includes("मॅप्स")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end", "Google Maps");
-                        else if (cleanCmd.includes("wifi") || cleanCmd.includes("वायफाय")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end", "WiFi Settings");
-                        else if (cleanCmd.includes("bluetooth") || cleanCmd.includes("ब्लूटूथ")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end", "Bluetooth Settings");
-                        else if (cleanCmd.length > 1) {
-                            let chatQuery = cleanCmd.trim();
-                            askGeminiChat(chatQuery);
-                        }
-                    }
+                if (interimTranscript.trim() !== "") {
+                    document.getElementById("speech-live").innerText = interimTranscript;
+                    
+                    // ⚡ रिअल-टाइम टाइमर: तू बोलणं थांबवल्या थांबवल्या १ सेकंदात (1000ms) डेटा फायर होईल!
+                    clearTimeout(speechTimeout);
+                    speechTimeout = setTimeout(() => {
+                        processVoiceInput(interimTranscript);
+                    }, 1000);
                 }
             };
 
-            // 🔥 फायनल ब्लिंकिंग फिक्स: ७००ms चा संथ गॅप देऊन शांतपणे रीस्टार्ट करा
             recognition.onend = function() {
                 isListening = false;
                 if (!actionExecuted && !isSpeaking) {
-                    setTimeout(() => {
-                        if(!isListening && !isSpeaking && !actionExecuted) {
-                            try { recognition.start(); } catch(e) {}
-                        }
-                    }, 700); 
+                    setTimeout(safeStartMic, 500); 
                 }
             };
             
-            try { recognition.start(); } catch(e) {}
+            safeStartMic();
         }
 
         document.getElementById("refresh-btn").addEventListener("click", function() {
             actionExecuted = false;
             isSpeaking = false;
             isListening = false;
+            clearTimeout(speechTimeout);
             window.speechSynthesis.cancel(); 
             if (recognition) { try { recognition.abort(); } catch(e) {} }
             let unlockSpeech = new SpeechSynthesisUtterance('');
             window.speechSynthesis.speak(unlockSpeech);
-            document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>🔄 Refreshed! Voice Unlocked. Speak now...</span>";
-            setTimeout(startFreshMic, 500); 
+            document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>🔄 Refreshed! Speak now...</span>";
+            setTimeout(startFreshMic, 400); 
         });
 
         document.addEventListener("visibilitychange", function() {
@@ -395,7 +392,7 @@ else:
         if (SpeechRecognition) {
             startFreshMic();
         } else {
-            document.getElementById("speech-live").innerText = "Web Speech API not supported. Please use Text Input.";
+            document.getElementById("speech-live").innerText = "Web Speech API not supported.";
         }
     </script>
     """
