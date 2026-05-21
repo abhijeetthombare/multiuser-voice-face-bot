@@ -73,7 +73,7 @@ if not st.session_state['authenticated']:
         if len(st.session_state['user_db']) == 0:
             st.warning("⚠️ आधी रजिस्ट्रेशन टॅबमध्ये जाऊन किमान एका युझरची नोंदणी करा.")
         else:
-            login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फोटो काढा (चष्मा नको!)", key="login_camera")
+            login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फोटो काढा", key="login_camera")
             
             if login_cam:
                 with st.spinner("🔄 Scanning Face Database..."):
@@ -84,7 +84,7 @@ if not st.session_state['authenticated']:
                         best_score = 1.0
                         best_match_name = None
                         
-                        # 🔥 नवीन लॉजिक: आधी सर्वात 'Best Match' शोधा
+                        # आधी सर्वात 'Best Match' शोधा
                         for name, base_img in st.session_state['user_db'].items():
                             base_resized = base_img.resize((300, 300))
                             diff = ImageChops.difference(base_resized, login_resized)
@@ -95,15 +95,15 @@ if not st.session_state['authenticated']:
                                 best_score = diff_ratio
                                 best_match_name = name
                         
-                        # 🔥 मिलिटरी ग्रेड सिक्युरिटी: 0.10 (Ultra Strict Mode)
-                        # जर थोडाही बदल (चष्मा/दुसरा माणूस) असेल, तर स्कोर 0.10 च्या वर जाईल आणि रिजेक्ट होईल!
-                        if best_score < 0.10 and best_match_name is not None:
+                        # 🔥 सुवर्णमध्य (Golden Sweet Spot): 0.14
+                        # याने तुला बरोबर ओळखेल, पण दुसऱ्याला नाही!
+                        if best_score < 0.14 and best_match_name is not None:
                             st.session_state['authenticated'] = True
                             st.session_state['current_user'] = best_match_name
                             st.query_params["user"] = best_match_name
                             st.rerun()
                         else:
-                            st.error(f"❌ चेहरा ओळखता आला नाही! (सुरक्षा नकार - Distance: {round(best_score, 2)})\nकृपया चष्मा काढला आहे आणि प्रकाश योग्य आहे याची खात्री करा.")
+                            st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})\nकृपया कॅमेरा समोर सरळ बघा आणि प्रकाश योग्य असल्याची खात्री करा.")
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
