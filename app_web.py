@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Voice Bot (Multi-Language AI)")
+st.title("🤖 Next-Gen Voice Bot (Ultra-Secure Multi-Language AI)")
 st.write("---")
 
 # --- २. PERMANENT FACE DATABASE (कायमस्वरूपी फोल्डर) ---
@@ -73,7 +73,7 @@ if not st.session_state['authenticated']:
         if len(st.session_state['user_db']) == 0:
             st.warning("⚠️ आधी रजिस्ट्रेशन टॅबमध्ये जाऊन किमान एका युझरची नोंदणी करा.")
         else:
-            login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फोटो काढा", key="login_camera")
+            login_cam = st.camera_input("लॉगिनसाठी चेहऱ्याचा फोटो काढा (चष्मा नको!)", key="login_camera")
             
             if login_cam:
                 with st.spinner("🔄 Scanning Face Database..."):
@@ -81,10 +81,10 @@ if not st.session_state['authenticated']:
                         login_img = Image.open(login_cam).convert('RGB')
                         login_resized = login_img.resize((300, 300))
                         
-                        match_found = False
-                        identified_user = None
                         best_score = 1.0
+                        best_match_name = None
                         
+                        # 🔥 नवीन लॉजिक: आधी सर्वात 'Best Match' शोधा
                         for name, base_img in st.session_state['user_db'].items():
                             base_resized = base_img.resize((300, 300))
                             diff = ImageChops.difference(base_resized, login_resized)
@@ -93,17 +93,17 @@ if not st.session_state['authenticated']:
                             
                             if diff_ratio < best_score:
                                 best_score = diff_ratio
-                                if diff_ratio < 0.18: 
-                                    match_found = True
-                                    identified_user = name
+                                best_match_name = name
                         
-                        if match_found:
+                        # 🔥 मिलिटरी ग्रेड सिक्युरिटी: 0.10 (Ultra Strict Mode)
+                        # जर थोडाही बदल (चष्मा/दुसरा माणूस) असेल, तर स्कोर 0.10 च्या वर जाईल आणि रिजेक्ट होईल!
+                        if best_score < 0.10 and best_match_name is not None:
                             st.session_state['authenticated'] = True
-                            st.session_state['current_user'] = identified_user
-                            st.query_params["user"] = identified_user
+                            st.session_state['current_user'] = best_match_name
+                            st.query_params["user"] = best_match_name
                             st.rerun()
                         else:
-                            st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})")
+                            st.error(f"❌ चेहरा ओळखता आला नाही! (सुरक्षा नकार - Distance: {round(best_score, 2)})\nकृपया चष्मा काढला आहे आणि प्रकाश योग्य आहे याची खात्री करा.")
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
@@ -349,7 +349,6 @@ else:
 
     st.write("---")
     
-    # 🔥 इथे ३ बटन्स लावली आहेत!
     col_btn1, col_btn2, col_btn3 = st.columns(3)
     
     with col_btn1:
@@ -366,20 +365,16 @@ else:
             st.rerun()
             
     with col_btn3:
-        # 🔥 हे नवीन 'Delete Account' बटण आहे!
         if st.button("🗑️ Delete My Account", use_container_width=True):
             user_to_delete = st.session_state['current_user']
             
-            # १. डेटाबेसमधून नाव हटवा
             if user_to_delete in st.session_state['user_db']:
                 del st.session_state['user_db'][user_to_delete]
                 
-            # २. फोल्डरमधून फोटो कायमचा उडवा
             file_path = os.path.join("registered_faces", f"{user_to_delete}.jpg")
             if os.path.exists(file_path):
                 os.remove(file_path)
                 
-            # ३. लॉगआउट करून बाहेर काढा
             st.session_state['authenticated'] = False
             st.session_state['current_user'] = None 
             st.query_params.clear() 
