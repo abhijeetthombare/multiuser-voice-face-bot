@@ -111,7 +111,6 @@ if not st.session_state['authenticated']:
 else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}! (Your session is permanently active)")
     
-    # 🔥 लँग्वेज सिलेक्टर (हिंदी उडवले)
     lang_choice = st.radio("🗣️ Choose Bot Language / भाषा निवडा:", ["English", "मराठी"], horizontal=True)
     
     lang_map = {
@@ -350,16 +349,37 @@ else:
 
     st.write("---")
     
-    lock_col, logout_col = st.columns(2)
+    # 🔥 इथे ३ बटन्स लावली आहेत!
+    col_btn1, col_btn2, col_btn3 = st.columns(3)
     
-    with lock_col:
-        if st.button("🔒 Lock System Manually", use_container_width=True):
+    with col_btn1:
+        if st.button("🔒 Lock System", use_container_width=True):
             st.session_state['authenticated'] = False
             st.query_params.clear() 
             st.rerun()
             
-    with logout_col:
+    with col_btn2:
         if st.button("🚪 Logout", use_container_width=True):
+            st.session_state['authenticated'] = False
+            st.session_state['current_user'] = None 
+            st.query_params.clear() 
+            st.rerun()
+            
+    with col_btn3:
+        # 🔥 हे नवीन 'Delete Account' बटण आहे!
+        if st.button("🗑️ Delete My Account", use_container_width=True):
+            user_to_delete = st.session_state['current_user']
+            
+            # १. डेटाबेसमधून नाव हटवा
+            if user_to_delete in st.session_state['user_db']:
+                del st.session_state['user_db'][user_to_delete]
+                
+            # २. फोल्डरमधून फोटो कायमचा उडवा
+            file_path = os.path.join("registered_faces", f"{user_to_delete}.jpg")
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                
+            # ३. लॉगआउट करून बाहेर काढा
             st.session_state['authenticated'] = False
             st.session_state['current_user'] = None 
             st.query_params.clear() 
