@@ -13,10 +13,10 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Voice Bot (Ultra-Fast & Secure AI)")
+st.title("🤖 Next-Gen Voice Bot (Ultra-Secure Multi-Language AI)")
 st.write("---")
 
-# --- २. PERMANENT FACE DATABASE ---
+# --- २. PERMANENT FACE DATABASE (कायमस्वरूपी फोल्डर) ---
 if not os.path.exists("registered_faces"):
     os.makedirs("registered_faces")
 
@@ -28,7 +28,7 @@ if 'user_db' not in st.session_state:
             img_path = os.path.join("registered_faces", file)
             st.session_state['user_db'][name] = Image.open(img_path).convert('RGB')
 
-# --- ३. AUTO-LOGIN CHECK ---
+# --- ३. AUTO-LOGIN CHECK (URL Token) ---
 if 'user' in st.query_params:
     st.session_state['authenticated'] = True
     st.session_state['current_user'] = st.query_params['user']
@@ -46,7 +46,7 @@ with col2:
 
 st.write("---")
 
-# --- ५. REGISTRATION & LOGIN TABS ---
+# --- ५. REGISTRATION & AUTOMATIC LOGIN TABS ---
 if not st.session_state['authenticated']:
     tab1, tab2 = st.tabs(["📝 New User Registration", "🔑 Automatic Biometric Login"])
     
@@ -84,6 +84,7 @@ if not st.session_state['authenticated']:
                         best_score = 1.0
                         best_match_name = None
                         
+                        # आधी सर्वात 'Best Match' शोधा
                         for name, base_img in st.session_state['user_db'].items():
                             base_resized = base_img.resize((300, 300))
                             diff = ImageChops.difference(base_resized, login_resized)
@@ -94,13 +95,15 @@ if not st.session_state['authenticated']:
                                 best_score = diff_ratio
                                 best_match_name = name
                         
-                        if best_score < 0.15 and best_match_name is not None:
+                        # 🔥 सुवर्णमध्य (Golden Sweet Spot): 0.14
+                        # याने तुला बरोबर ओळखेल, पण दुसऱ्याला नाही!
+                        if best_score < 0.14 and best_match_name is not None:
                             st.session_state['authenticated'] = True
                             st.session_state['current_user'] = best_match_name
                             st.query_params["user"] = best_match_name
                             st.rerun()
                         else:
-                            st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})\nदुसरा व्यक्ती किंवा चुकीचा प्रकाश असू शकतो.")
+                            st.error(f"❌ चेहरा ओळखता आला नाही! (Distance: {round(best_score, 2)})\nकृपया कॅमेरा समोर सरळ बघा आणि प्रकाश योग्य असल्याची खात्री करा.")
                     except Exception as e:
                         st.error(f"प्रमाणीकरण एरर: {e}")
 
@@ -109,40 +112,39 @@ else:
     st.success(f"🔓 Authenticated Successfully as {st.session_state['current_user']}! (Your session is permanently active)")
     
     lang_choice = st.radio("🗣️ Choose Bot Language / भाषा निवडा:", ["English", "मराठी"], horizontal=True)
-    lang_map = { "English": "en-IN", "मराठी": "mr-IN" }
-    stt_lang = lang_map[lang_choice]
+    
+    lang_map = {
+        "English": ("en-IN", "en"),
+        "मराठी": ("mr-IN", "mr")
+    }
+    stt_lang, wiki_lang = lang_map[lang_choice]
 
     st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
     active_user = str(st.session_state['current_user'])
 
-    # --- 🎙️ JAVASCRIPT: GEMINI CHATBOT ENGINE (ULTIMATE NO-BLINK EDITION) ---
+    # --- 🎙️ JAVASCRIPT: PRIVATE HISTORY & MULTI-LINGUAL WIKIPEDIA ENGINE ---
     js_template = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
-        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 Gemini Chat AI: <span id="speech-live" style="color:#333; font-weight:normal;">Tap Refresh/Wake Up to start...</span></p>
+        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 AI Assistant: <span id="speech-live" style="color:#333; font-weight:normal;">Listening continuously...</span></p>
         
-        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-            <input type="text" id="text-input" placeholder="येथे टाईप करा किंवा बोला..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size:16px;">
-            <button id="send-btn" style="padding: 12px 20px; background-color: #3498db; color: white; border: none; border-radius: 8px; font-weight:bold; cursor: pointer; font-size:16px;">Send</button>
-        </div>
-
         <button id="refresh-btn" style="width:100%; padding:12px; background-color:#f39c12; color:white; font-size:16px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom:10px;">🔄 Refresh / Wake Up Voice</button>
         <button id="wakeup-btn" style="display:none; width:100%; padding:15px; background-color:#2ecc71; color:white; font-size:18px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🎤 Tap Here to Resume Mic</button>
     </div>
 
     <div id="history-container" style="background-color:#ffffff; border-radius:10px; padding:15px; max-height: 250px; overflow-y: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align:left;">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #f0f2f6; padding-bottom: 5px; margin-bottom: 10px;">
-            <h4 style="margin:0; color:#2c3e50;">📜 USER_NAME's Chat History</h4>
+            <h4 style="margin:0; color:#2c3e50;">📜 USER_NAME's Search History</h4>
             <button onclick="clearHistory()" style="background:#e74c3c; color:white; border:none; border-radius:5px; padding:5px 10px; cursor:pointer; font-size:12px;">🗑️ Clear</button>
         </div>
         <div id="history-list"></div>
     </div>
 
     <script>
-        const GEMINI_API_KEY = "AIzaSyDzMF5GpLFp1LMI_AHpTbXiVrlTD1o0cYQ"; // 🔑 तुमचा Gemini API Key इथे टाका
         const CURRENT_USER = 'USER_NAME';
         const HISTORY_KEY = 'abhii_bot_history_' + CURRENT_USER; 
         const STT_LANG = 'LANG_STT';
+        const WIKI_LANG = 'LANG_WIKI';
 
         function updateHistoryUI() {
             let history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
@@ -154,7 +156,7 @@ else:
                     html += `
                         <div style="background:#f8f9fa; padding:10px; margin-bottom:8px; border-radius:8px; border-left: 4px solid #1f77b4;">
                             <div style="font-weight:bold; color:#2980b9; margin-bottom:4px;">🗣️ ${CURRENT_USER}: ${item.query}</div>
-                            <div style="color:#444; font-size:14px;">🤖 Gemini: ${item.response}</div>
+                            <div style="color:#444; font-size:14px;">🤖 AI: ${item.response}</div>
                         </div>`;
                 });
             }
@@ -177,223 +179,204 @@ else:
         updateHistoryUI();
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition;
-        let actionExecuted = false; 
-        let isSpeaking = false; 
-        let isListening = false;
-
-        function safeStartMic() {
-            if (!isListening && !isSpeaking && !actionExecuted && recognition) {
-                try {
-                    recognition.start();
-                } catch (e) {
-                    console.log("Mic error:", e);
-                }
-            }
-        }
-
-        function speakText(text) {
-            window.speechSynthesis.cancel();
-            isSpeaking = true;
-            if (recognition) { try { recognition.abort(); } catch(e) {} }
-            
-            let cleanTextForSpeech = text.replace(/[*#]/g, ''); 
-            let speech = new SpeechSynthesisUtterance(cleanTextForSpeech);
-            speech.lang = STT_LANG; 
-            speech.rate = 1.0; 
-            
-            speech.onstart = function() {
-                isSpeaking = true;
-            };
-            
-            speech.onend = function() {
-                isSpeaking = false;
-                document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is listening again...</span>";
-                setTimeout(startFreshMic, 800); 
-            };
-            
-            speech.onerror = function() {
-                isSpeaking = false;
-                setTimeout(startFreshMic, 800);
-            };
-            window.speechSynthesis.speak(speech);
-        }
-
-        function askGeminiChat(searchTerm) {
-            if (!searchTerm || searchTerm.trim().length < 2) {
-                setTimeout(safeStartMic, 600);
-                return;
-            }
-
-            if (recognition) { try { recognition.abort(); } catch(e) {} } 
-            document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🧠 Gemini is thinking...</span>";
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-            
-            let langInstruction = STT_LANG === 'mr-IN' ? "Reply in pure conversational Marathi language." : "Reply in conversational English.";
-            const prompt = `You are the user's friendly AI assistant. The user says: "${searchTerm}". ${langInstruction} Keep your answer short, friendly, and conversational (max 2-3 sentences). Do not use asterisks or markdown.`;
-
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    document.getElementById("speech-live").innerText = "API Key Error. Please put a valid Gemini API Key.";
-                    setTimeout(safeStartMic, 600);
-                    return;
-                }
-                let answer = "Sorry, I didn't get that.";
-                if (data.candidates && data.candidates.length > 0) {
-                    answer = data.candidates[0].content.parts[0].text;
-                }
-                document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>💬 </span>" + answer;
-                saveHistory(searchTerm, answer); 
-                speakText(answer); 
-            })
-            .catch(err => {
-                document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⚠️ Network Error!</span>";
-                setTimeout(safeStartMic, 800);
-            });
-        }
-
-        document.getElementById("send-btn").addEventListener("click", function() {
-            let textVal = document.getElementById("text-input").value;
-            if(textVal.trim() !== "") {
-                askGeminiChat(textVal);
-                document.getElementById("text-input").value = ""; 
-            }
-        });
-
-        document.getElementById("text-input").addEventListener("keypress", function(e) {
-            if(e.key === 'Enter') {
-                document.getElementById("send-btn").click();
-            }
-        });
-
-        function startFreshMic() {
-            if (isSpeaking || actionExecuted) return;
-            if (recognition) { try { recognition.abort(); } catch(e) {} }
-
-            if (!SpeechRecognition) return;
-
-            recognition = new SpeechRecognition();
-            // 🔥 नियम: continuous = false जेणेकरून ब्राउझर लूपमध्ये अडकणार नाही आणि ब्लिंक होणार नाही!
-            recognition.continuous = false; 
-            recognition.interimResults = false; 
-            recognition.lang = STT_LANG; 
-
-            recognition.onstart = function() {
-                isListening = true;
-                document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI Active. Speak now...</span>";
-            };
-
-            recognition.onresult = function(event) {
-                let transcript = event.results[0][0].transcript;
-                document.getElementById("speech-live").innerText = transcript;
-                
-                if (transcript.trim().length >= 2) {
-                    const query = transcript.toLowerCase().trim();
-                    
-                    if (query.includes("python") || query.includes("paithen") || query.includes("पायथन") || query.includes("पायथॉन")) {
-                        let cleanCmd = query.replace(/python|paithen|open|start|पायथन|पायथॉन|उघडा|चालू करा/g, "").trim();
-                        
-                        function fireIntent(intentUrl, appName) {
-                            actionExecuted = true; 
-                            if (recognition) { try { recognition.abort(); } catch(e) {} }
-                            saveHistory(query, `Opened ${appName} App ⚡`); 
-                            window.open(intentUrl, '_blank'); 
-                            document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Tap Wake Up to resume.</span>";
-                        }
-                        
-                        if (cleanCmd.includes("whatsapp") || cleanCmd.includes("व्हॉट्सॲप")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end", "WhatsApp");
-                        else if (cleanCmd.includes("youtube") || cleanCmd.includes("यूट्यूब")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end", "YouTube");
-                        else if (cleanCmd.includes("instagram") || cleanCmd.includes("इन्स्टाग्राम")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end", "Instagram");
-                        else if (cleanCmd.includes("facebook") || cleanCmd.includes("फेसबुक")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end", "Facebook");
-                        else if (cleanCmd.includes("map") || cleanCmd.includes("maps") || cleanCmd.includes("मॅप्स")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end", "Google Maps");
-                        else if (cleanCmd.includes("wifi") || cleanCmd.includes("वायफाय")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end", "WiFi Settings");
-                        else if (cleanCmd.includes("bluetooth") || cleanCmd.includes("ब्लूटूथ")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end", "Bluetooth Settings");
-                        else if (cleanCmd.length > 1) {
-                            askGeminiChat(cleanCmd.trim());
-                        }
-                    } else {
-                        // जर 'पायथन' नसेल तर फक्त नॉर्मल गप्पा मारण्यासाठी थेट जेमिनीकडे पाठवा
-                        askGeminiChat(query);
-                    }
-                }
-            };
-
-            recognition.onend = function() {
-                isListening = false;
-                if (!actionExecuted && !isSpeaking) {
-                    // १ सेकंदाचा सुरक्षित विसावा देऊन पुन्हा चालू करा
-                    sidebarTimeout = setTimeout(safeStartMic, 1000); 
-                }
-            };
-            
-            try { recognition.start(); } catch(e) {}
-        }
-
-        document.getElementById("refresh-btn").addEventListener("click", function() {
-            actionExecuted = false;
-            isSpeaking = false;
-            isListening = false;
-            window.speechSynthesis.cancel(); 
-            if (recognition) { try { recognition.abort(); } catch(e) {} }
-            let unlockSpeech = new SpeechSynthesisUtterance('');
-            window.speechSynthesis.speak(unlockSpeech);
-            document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>🔄 Refreshed! Speak now...</span>";
-            setTimeout(startFreshMic, 400); 
-        });
-
-        document.addEventListener("visibilitychange", function() {
-            if (document.visibilityState === "visible" && actionExecuted === true) {
-                document.getElementById("wakeup-btn").style.display = "block";
-            }
-        });
-
-        document.getElementById("wakeup-btn").addEventListener("click", function() {
-            actionExecuted = false; 
-            isListening = false;
-            this.style.display = "none"; 
-            document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI Active! Speak now...</span>";
-            startFreshMic(); 
-        });
-
-        if (SpeechRecognition) {
-            startFreshMic();
-        } else {
+        if (!SpeechRecognition) {
             document.getElementById("speech-live").innerText = "Web Speech API not supported.";
+        } else {
+            let recognition;
+            let actionExecuted = false; 
+            let isSpeaking = false; 
+
+            function speakText(text) {
+                window.speechSynthesis.cancel();
+                isSpeaking = true;
+                
+                if (recognition) { try { recognition.abort(); } catch(e) {} }
+                
+                let cleanTextForSpeech = text.replace(/[*#]/g, ''); 
+                let speech = new SpeechSynthesisUtterance(cleanTextForSpeech);
+                speech.lang = STT_LANG; 
+                speech.rate = 1.0; 
+                
+                speech.onstart = function() {
+                    if (recognition) { try { recognition.abort(); } catch(e) {} }
+                };
+
+                speech.onend = function() {
+                    isSpeaking = false;
+                    document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is listening again...</span>";
+                    setTimeout(startFreshMic, 800); 
+                };
+
+                speech.onerror = function() {
+                    isSpeaking = false;
+                    setTimeout(startFreshMic, 800);
+                };
+                
+                window.speechSynthesis.speak(speech);
+            }
+
+            function askWikipedia(searchTerm) {
+                if (recognition) { try { recognition.abort(); } catch(e) {} } 
+                
+                let formattedTerm = searchTerm.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('_');
+                
+                document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🔍 Searching Wikipedia for: </span>" + searchTerm + "...";
+
+                fetch(`https://${WIKI_LANG}.wikipedia.org/api/rest_v1/page/summary/${formattedTerm}`)
+                .then(response => {
+                    if (!response.ok) throw new Error("Not Found");
+                    return response.json();
+                })
+                .then(data => {
+                    let answer = "Sorry, I couldn't find accurate information about that.";
+                    if (data.type === "standard" || data.type === "disambiguation") {
+                        answer = data.extract; 
+                    }
+                    
+                    document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>💬 </span>" + answer;
+                    saveHistory(searchTerm, answer); 
+                    speakText(answer); 
+                })
+                .catch(err => {
+                    let errMsg = "Sorry, information not found for '" + searchTerm + "'. Try speaking just the name clearly.";
+                    document.getElementById("speech-live").innerHTML = "<span style='color:#d32f2f; font-weight:bold;'>⚠️ </span>" + errMsg;
+                    saveHistory(searchTerm, errMsg); 
+                    speakText(errMsg);
+                });
+            }
+
+            function startFreshMic() {
+                if (isSpeaking) return;
+                if (recognition) { try { recognition.abort(); } catch(e) {} }
+
+                recognition = new SpeechRecognition();
+                recognition.continuous = false; 
+                recognition.interimResults = true;
+                recognition.lang = STT_LANG; 
+
+                recognition.onresult = function(event) {
+                    if (isSpeaking) return; 
+
+                    let transcript = "";
+                    let isFinalCommand = false;
+
+                    for (let i = 0; i < event.results.length; ++i) {
+                        transcript += event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            isFinalCommand = true;
+                        }
+                    }
+
+                    document.getElementById("speech-live").innerText = transcript;
+                    
+                    if (isFinalCommand) {
+                        const query = transcript.toLowerCase().trim();
+                        
+                        if (query.includes("python") || query.includes("paithen") || query.includes("पायथन") || query.includes("पायथॉन")) {
+                            let cleanCmd = query.replace(/python|paithen|open|start|पायथन|पायथॉन|उघडा|चालू करा/g, "").trim();
+                            
+                            function fireIntent(intentUrl, appName) {
+                                actionExecuted = true; 
+                                saveHistory(query, `Opened ${appName} App ⚡`); 
+                                window.open(intentUrl, '_blank'); 
+                                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>⚡ App Opened! Come back and tap to resume.</span>";
+                            }
+
+                            if (cleanCmd.includes("whatsapp") || cleanCmd.includes("व्हॉट्सॲप")) fireIntent("intent://send/#Intent;package=com.whatsapp;scheme=whatsapp;end", "WhatsApp");
+                            else if (cleanCmd.includes("youtube") || cleanCmd.includes("यूट्यूब")) fireIntent("intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end", "YouTube");
+                            else if (cleanCmd.includes("instagram") || cleanCmd.includes("इन्स्टाग्राम")) fireIntent("intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end", "Instagram");
+                            else if (cleanCmd.includes("facebook") || cleanCmd.includes("फेसबुक")) fireIntent("intent://www.facebook.com/#Intent;package=com.facebook.katana;scheme=https;end", "Facebook");
+                            else if (cleanCmd.includes("map") || cleanCmd.includes("maps") || cleanCmd.includes("मॅप्स")) fireIntent("intent://geo:0,0?q=maps#Intent;scheme=geo;end", "Google Maps");
+                            else if (cleanCmd.includes("wifi") || cleanCmd.includes("वायफाय")) fireIntent("intent:#Intent;action=android.settings.WIFI_SETTINGS;end", "WiFi Settings");
+                            else if (cleanCmd.includes("bluetooth") || cleanCmd.includes("ब्लूटूथ")) fireIntent("intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end", "Bluetooth Settings");
+                            
+                            else if (cleanCmd.length > 1) {
+                                let searchQuery = cleanCmd.replace(/search|who is|what is|tell me about|शोध|कोण आहे|माहिती सांग/g, "").trim();
+                                askWikipedia(searchQuery);
+                            }
+                        }
+                    }
+                };
+
+                recognition.onend = function() {
+                    if (!actionExecuted && !isSpeaking) {
+                        setTimeout(() => { try { recognition.start(); } catch(err) {} }, 300);
+                    }
+                };
+
+                try { recognition.start(); } catch(e) {}
+            }
+
+            document.getElementById("refresh-btn").addEventListener("click", function() {
+                actionExecuted = false;
+                isSpeaking = false;
+                window.speechSynthesis.cancel(); 
+                
+                let unlockSpeech = new SpeechSynthesisUtterance('');
+                window.speechSynthesis.speak(unlockSpeech);
+
+                document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>🔄 Refreshed! Voice Unlocked. Speak now...</span>";
+                startFreshMic(); 
+            });
+
+            setInterval(() => {
+                if (!actionExecuted && !isSpeaking && recognition) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            }, 5000);
+
+            document.addEventListener("visibilitychange", function() {
+                if (document.visibilityState === "visible" && actionExecuted === true) {
+                    document.getElementById("wakeup-btn").style.display = "block";
+                }
+            });
+
+            document.getElementById("wakeup-btn").addEventListener("click", function() {
+                actionExecuted = false; 
+                this.style.display = "none"; 
+                document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is ACTIVE! Speak now...</span>";
+                startFreshMic(); 
+            });
+
+            startFreshMic();
         }
     </script>
     """
     
-    js_final = js_template.replace("USER_NAME", active_user).replace("LANG_STT", stt_lang)
+    js_final = js_template.replace("USER_NAME", active_user).replace("LANG_STT", stt_lang).replace("LANG_WIKI", wiki_lang)
+    
     components.html(js_final, height=600)
 
     st.write("---")
+    
     col_btn1, col_btn2, col_btn3 = st.columns(3)
+    
     with col_btn1:
         if st.button("🔒 Lock System", use_container_width=True):
             st.session_state['authenticated'] = False
             st.query_params.clear() 
             st.rerun()
+            
     with col_btn2:
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state['authenticated'] = False
             st.session_state['current_user'] = None 
             st.query_params.clear() 
             st.rerun()
+            
     with col_btn3:
         if st.button("🗑️ Delete My Account", use_container_width=True):
             user_to_delete = st.session_state['current_user']
+            
             if user_to_delete in st.session_state['user_db']:
                 del st.session_state['user_db'][user_to_delete]
+                
             file_path = os.path.join("registered_faces", f"{user_to_delete}.jpg")
             if os.path.exists(file_path):
                 os.remove(file_path)
+                
             st.session_state['authenticated'] = False
             st.session_state['current_user'] = None 
             st.query_params.clear() 
             st.rerun()
+            
