@@ -135,7 +135,7 @@ else:
 
     <script>
         // 🔥 इथे तुझी API Key टाक!
-        const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
+        const GEMINI_API_KEY = "AIzaSyD69OJG4T2pfwHDcpvTlI-SQsm8y3B2yqs"; 
 
         const CURRENT_USER = 'USER_NAME';
         const HISTORY_KEY = 'abhii_bot_history_' + CURRENT_USER; 
