@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Next-Gen Voice Bot (Ultra-Fast & Secure AI)")
+st.title("🤖 Next-Gen Voice Bot (Ultra-Secure AI)")
 st.write("---")
 
 # --- २. PERMANENT FACE DATABASE ---
@@ -94,8 +94,7 @@ if not st.session_state['authenticated']:
                                 best_score = diff_ratio
                                 best_match_name = name
                         
-                        # 🔥 THE GOLDEN FIX: 0.15 
-                        # (हा गणेशला किंवा प्रथमेशला आत घेणार नाही, फक्त तुलाच फास्ट ओळखेल!)
+                        # सिक्युरिटी स्कोर: 0.15
                         if best_score < 0.15 and best_match_name is not None:
                             st.session_state['authenticated'] = True
                             st.session_state['current_user'] = best_match_name
@@ -336,7 +335,10 @@ else:
     components.html(js_final, height=600)
 
     st.write("---")
+    
+    # 🔥 ३ जनरल बटन्स (जे सर्वांना दिसतील)
     col_btn1, col_btn2, col_btn3 = st.columns(3)
+    
     with col_btn1:
         if st.button("🔒 Lock System", use_container_width=True):
             st.session_state['authenticated'] = False
@@ -360,3 +362,32 @@ else:
             st.session_state['current_user'] = None 
             st.query_params.clear() 
             st.rerun()
+
+    # ==========================================
+    # 👑 ADMIN CONTROL PANEL (फक्त 'Abhijeet' साठी)
+    # ==========================================
+    ADMIN_NAME = "Abhijeet"  # <--- तू रजिस्ट्रेशन करताना जे नाव टाकतोस तेच इथे पाहिजे (उदा. Abhii किंवा Abhijeet)
+    
+    if active_user == ADMIN_NAME:
+        st.write("---")
+        st.markdown("### 👑 Admin Control Panel")
+        st.info("System Admin Access: तुम्ही सिस्टीममधील कोणतेही युझर अकाऊंट डिलीट करू शकता.")
+        
+        # सिस्टीममध्ये असलेल्या सगळ्या युझर्सची लिस्ट
+        for u_name in list(st.session_state['user_db'].keys()):
+            col_u, col_d = st.columns([3, 1])
+            with col_u:
+                st.write(f"👤 **{u_name}**")
+            with col_d:
+                # हे बटण दाबल्यावर समोरच्याचं अकाऊंट उडून जाईल!
+                if st.button(f"🗑️ Delete User", key=f"del_{u_name}", use_container_width=True):
+                    # १. DB मधून उडवा
+                    del st.session_state['user_db'][u_name]
+                    # २. फोल्डरमधून फोटो उडवा
+                    file_path = os.path.join("registered_faces", f"{u_name}.jpg")
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                    
+                    st.success(f"'{u_name}' चे खाते यशस्वीरित्या डिलीट झाले!")
+                    time.sleep(1)
+                    st.rerun()
