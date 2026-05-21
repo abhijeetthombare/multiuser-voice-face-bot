@@ -137,10 +137,10 @@ else:
     lang_map = { "English": "en-IN", "मराठी": "mr-IN" }
     stt_lang = lang_map[lang_choice]
 
-    # --- 🎙️ JAVASCRIPT: GEMINI CHATBOT ENGINE (NO-BLINK + REALTIME TRIGER) ---
+    # --- 🎙️ JAVASCRIPT: GEMINI CHATBOT ENGINE (ANTI TUN-TUN EDITION) ---
     js_template = """
     <div id="voice-ui" style="padding:15px; background-color:#f0f2f6; border-radius:10px; margin-bottom:10px; text-align:center; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
-        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 Gemini Chat AI: <span id="speech-live" style="color:#333; font-weight:normal;">Listening steadily without blinking...</span></p>
+        <p style="margin:0; font-weight:bold; color:#1f77b4; margin-bottom:15px;">🤖 Gemini Chat AI: <span id="speech-live" style="color:#333; font-weight:normal;">Listening quietly... Speak when ready.</span></p>
         
         <div style="display: flex; gap: 10px; margin-bottom: 15px;">
             <input type="text" id="text-input" placeholder="येथे टाईप करा किंवा बोला..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size:16px;">
@@ -160,7 +160,8 @@ else:
     </div>
 
     <script>
-        const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
+        // 🔥 तुझी खरी नवीन API Key टाकून दे भावा!
+        const GEMINI_API_KEY = "AIzaSyDzMF5GpLFp1LMI_AHpTbXiVrlTD1o0cYQ"; 
         
         const CURRENT_USER = 'USER_NAME';
         const HISTORY_KEY = 'abhii_bot_history_' + CURRENT_USER; 
@@ -203,14 +204,14 @@ else:
         let actionExecuted = false; 
         let isSpeaking = false; 
         let isListening = false;
-        let speechTimeout; // 🔥 बोलणं संपल्यावर वेळ मोजण्यासाठी टायमर
+        let speechTimeout;
 
         function safeStartMic() {
             if (!isListening && !isSpeaking && !actionExecuted && recognition) {
                 try {
                     recognition.start();
                 } catch (e) {
-                    console.log("Mic already running:", e);
+                    console.log("Mic running:", e);
                 }
             }
         }
@@ -243,6 +244,9 @@ else:
         }
 
         function askGeminiChat(searchTerm) {
+            // 🔥 रिकामी कमांड असेल तर सरळ ब्लॉक करा! (नो टुन टुन)
+            if (!searchTerm || searchTerm.trim().length < 2) return;
+
             if (recognition) { try { recognition.abort(); } catch(e) {} } 
             document.getElementById("speech-live").innerHTML = "<span style='color:#8e44ad; font-weight:bold;'>🧠 Gemini is thinking...</span>";
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -289,9 +293,12 @@ else:
             }
         });
 
-        // 🔥 फायनल रिअल-टाइम व्हॉइस प्रोसेसिंग सिस्टीम
         function processVoiceInput(finalTranscript) {
             const query = finalTranscript.toLowerCase().trim();
+            
+            // 🔥 जर फक्त कचरा आवाज असेल आणि 'पायथन' नसेल, तर ब्लॉक करा
+            if (query.length < 3) return;
+
             if (query.includes("python") || query.includes("paithen") || query.includes("पायथन") || query.includes("पायथॉन")) {
                 let cleanCmd = query.replace(/python|paithen|open|start|पायथन|पायथॉन|उघडा|चालू करा/g, "").trim();
                 
@@ -323,14 +330,13 @@ else:
             if (!SpeechRecognition) return;
 
             recognition = new SpeechRecognition();
-            // 🔥 माईक सतत सुरू ठेवलाय, ब्लिंकिंग पूर्ण बंद!
             recognition.continuous = true; 
             recognition.interimResults = true; 
             recognition.lang = STT_LANG; 
 
             recognition.onstart = function() {
                 isListening = true;
-                document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI Listening (No-Blink)... Speak now</span>";
+                document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI Online & Silent... Speak now</span>";
             };
 
             recognition.onresult = function(event) {
@@ -341,21 +347,22 @@ else:
                     interimTranscript += event.results[i][0].transcript;
                 }
                 
-                if (interimTranscript.trim() !== "") {
+                // 🔥 फक्त व्हॅलिड शब्दांसाठीच यूआय अपडेट करा आणि टायमर लावा
+                if (interimTranscript.trim().length >= 2) {
                     document.getElementById("speech-live").innerText = interimTranscript;
                     
-                    // ⚡ रिअल-टाइम टाइमर: तू बोलणं थांबवल्या थांबवल्या १ सेकंदात (1000ms) डेटा फायर होईल!
                     clearTimeout(speechTimeout);
+                    // 🔥 १.५ सेकंद (1500ms) चा रिलॅक्स टायमर दिलेला आहे
                     speechTimeout = setTimeout(() => {
                         processVoiceInput(interimTranscript);
-                    }, 1000);
+                    }, 1500);
                 }
             };
 
             recognition.onend = function() {
                 isListening = false;
                 if (!actionExecuted && !isSpeaking) {
-                    setTimeout(safeStartMic, 500); 
+                    setTimeout(safeStartMic, 600); 
                 }
             };
             
