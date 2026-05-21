@@ -68,7 +68,7 @@ if not st.session_state['authenticated']:
                 st.error("❌ कृपया नाव आणि फोटो दोन्ही गोष्टी पूर्ण करा.")
 
     with tab2:
-        st.subheader("फक्त कॅमेरा समोर या - सिस्टीम स्वतः ओळखेल")
+        st.subheader("फक्त कॅмера समोर या - सिस्टीम स्वतः ओळखेल")
         
         if len(st.session_state['user_db']) == 0:
             st.warning("⚠️ आधी रजिस्ट्रेशन टॅबमध्ये जाऊन किमान एका युझरची नोंदणी करा.")
@@ -160,7 +160,9 @@ else:
     </div>
 
     <script>
-        const GEMINI_API_KEY = "AIzaSyD69OJG4T2pfwHDcpvTlI-SQsm8y3B2yqs"; 
+        // 🔥 इथे तुझी नवीन API Key टाक! जुनी ब्लॉक होऊ शकते.
+        const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
+        
         const CURRENT_USER = 'USER_NAME';
         const HISTORY_KEY = 'abhii_bot_history_' + CURRENT_USER; 
         const STT_LANG = 'LANG_STT';
@@ -201,7 +203,7 @@ else:
         let recognition;
         let actionExecuted = false; 
         let isSpeaking = false; 
-        let isListening = false; // 🔥 हा नवीन लॉक ऍड केला आहे
+        let isListening = false; 
 
         function safeStartMic() {
             if (!isListening && !isSpeaking && !actionExecuted && recognition) {
@@ -303,7 +305,6 @@ else:
             recognition.interimResults = true;
             recognition.lang = STT_LANG; 
 
-            // 🔥 माईक खरोखर सुरु झाल्यावर हा लॉक ऑन होईल
             recognition.onstart = function() {
                 isListening = true;
             };
@@ -345,11 +346,10 @@ else:
                 }
             };
 
-            // 🔥 माईक बंद झाल्यावर लॉक ऑफ होईल आणि सुरक्षितपणे परत चालू होईल
             recognition.onend = function() {
                 isListening = false;
                 if (!actionExecuted && !isSpeaking) {
-                    setTimeout(safeStartMic, 500); // ५०० ms चा छोटा ब्रेक
+                    setTimeout(safeStartMic, 500); 
                 }
             };
             
@@ -368,7 +368,6 @@ else:
             setTimeout(startFreshMic, 500); 
         });
 
-        // 🔥 सुरक्षित टायमर (फक्त माईक बंद असेल तरच चालू करेल)
         setInterval(() => {
             if (!actionExecuted && !isSpeaking && !isListening) {
                 safeStartMic();
