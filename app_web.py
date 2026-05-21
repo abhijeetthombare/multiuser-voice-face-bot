@@ -94,7 +94,6 @@ if not st.session_state['authenticated']:
                                 best_score = diff_ratio
                                 best_match_name = name
                         
-                        # सिक्युरिटी स्कोर: 0.15
                         if best_score < 0.15 and best_match_name is not None:
                             st.session_state['authenticated'] = True
                             st.session_state['current_user'] = best_match_name
@@ -112,7 +111,7 @@ else:
     active_user = str(st.session_state['current_user'])
 
     # ==========================================
-    # 👑 ADMIN CONTROL PANEL (सर्वांत वरती)
+    # 👑 ADMIN CONTROL PANEL 
     # ==========================================
     ADMIN_NAME = "Abhijeet"  
     
@@ -202,6 +201,17 @@ else:
         let recognition;
         let actionExecuted = false; 
         let isSpeaking = false; 
+        let isListening = false; // 🔥 हा नवीन लॉक ऍड केला आहे
+
+        function safeStartMic() {
+            if (!isListening && !isSpeaking && !actionExecuted && recognition) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log("Mic already running or blocked:", e);
+                }
+            }
+        }
 
         function speakText(text) {
             window.speechSynthesis.cancel();
@@ -211,17 +221,21 @@ else:
             let speech = new SpeechSynthesisUtterance(cleanTextForSpeech);
             speech.lang = STT_LANG; 
             speech.rate = 1.0; 
+            
             speech.onstart = function() {
+                isSpeaking = true;
                 if (recognition) { try { recognition.abort(); } catch(e) {} }
             };
+            
             speech.onend = function() {
                 isSpeaking = false;
                 document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is listening again...</span>";
-                setTimeout(startFreshMic, 800); 
+                setTimeout(safeStartMic, 800); 
             };
+            
             speech.onerror = function() {
                 isSpeaking = false;
-                setTimeout(startFreshMic, 800);
+                setTimeout(safeStartMic, 800);
             };
             window.speechSynthesis.speak(speech);
         }
@@ -264,12 +278,11 @@ else:
             });
         }
 
-        // --- Text Input Handling ---
         document.getElementById("send-btn").addEventListener("click", function() {
             let textVal = document.getElementById("text-input").value;
             if(textVal.trim() !== "") {
                 askGeminiChat(textVal);
-                document.getElementById("text-input").value = ""; // Box clear करा
+                document.getElementById("text-input").value = ""; 
             }
         });
 
@@ -289,6 +302,11 @@ else:
             recognition.continuous = false; 
             recognition.interimResults = true;
             recognition.lang = STT_LANG; 
+
+            // 🔥 माईक खरोखर सुरु झाल्यावर हा लॉक ऑन होईल
+            recognition.onstart = function() {
+                isListening = true;
+            };
 
             recognition.onresult = function(event) {
                 if (isSpeaking) return; 
@@ -327,29 +345,35 @@ else:
                 }
             };
 
+            // 🔥 माईक बंद झाल्यावर लॉक ऑफ होईल आणि सुरक्षितपणे परत चालू होईल
             recognition.onend = function() {
+                isListening = false;
                 if (!actionExecuted && !isSpeaking) {
-                    setTimeout(() => { try { recognition.start(); } catch(err) {} }, 300);
+                    setTimeout(safeStartMic, 500); // ५०० ms चा छोटा ब्रेक
                 }
             };
-            try { recognition.start(); } catch(e) {}
+            
+            safeStartMic();
         }
 
         document.getElementById("refresh-btn").addEventListener("click", function() {
             actionExecuted = false;
             isSpeaking = false;
+            isListening = false;
             window.speechSynthesis.cancel(); 
+            if (recognition) { try { recognition.abort(); } catch(e) {} }
             let unlockSpeech = new SpeechSynthesisUtterance('');
             window.speechSynthesis.speak(unlockSpeech);
             document.getElementById("speech-live").innerHTML = "<span style='color:#e67e22; font-weight:bold;'>🔄 Refreshed! Voice Unlocked. Speak now...</span>";
-            startFreshMic(); 
+            setTimeout(startFreshMic, 500); 
         });
 
+        // 🔥 सुरक्षित टायमर (फक्त माईक बंद असेल तरच चालू करेल)
         setInterval(() => {
-            if (!actionExecuted && !isSpeaking && recognition) {
-                try { recognition.start(); } catch(e) {}
+            if (!actionExecuted && !isSpeaking && !isListening) {
+                safeStartMic();
             }
-        }, 5000);
+        }, 4000);
 
         document.addEventListener("visibilitychange", function() {
             if (document.visibilityState === "visible" && actionExecuted === true) {
@@ -359,6 +383,7 @@ else:
 
         document.getElementById("wakeup-btn").addEventListener("click", function() {
             actionExecuted = false; 
+            isListening = false;
             this.style.display = "none"; 
             document.getElementById("speech-live").innerHTML = "<span style='color:#2ecc71; font-weight:bold;'>🟢 AI is ACTIVE! Speak now...</span>";
             startFreshMic(); 
