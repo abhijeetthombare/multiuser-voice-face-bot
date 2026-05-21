@@ -160,7 +160,7 @@ else:
     </div>
 
     <script>
-        // 🔥 इथे तुझी नवीन API Key टाक! जुनी ब्लॉक होऊ शकते.
+        // 🔥 इथे तुझी नवीन API Key टाक! 
         const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
         
         const CURRENT_USER = 'USER_NAME';
@@ -301,7 +301,8 @@ else:
             if (!SpeechRecognition) return;
 
             recognition = new SpeechRecognition();
-            recognition.continuous = false; 
+            // 🔥 BLINKING FIX: इथे आता continuous = true केलंय म्हणजे माईक सतत चालू राहील!
+            recognition.continuous = true; 
             recognition.interimResults = true;
             recognition.lang = STT_LANG; 
 
@@ -311,18 +312,22 @@ else:
 
             recognition.onresult = function(event) {
                 if (isSpeaking) return; 
-                let transcript = "";
+                
+                let currentTranscript = "";
                 let isFinalCommand = false;
-                for (let i = 0; i < event.results.length; ++i) {
-                    transcript += event.results[i][0].transcript;
+                
+                // 🔥 Android Echo Bug Fix: फक्त नवीन शब्दच घ्या
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    currentTranscript += event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
                         isFinalCommand = true;
                     }
                 }
-                document.getElementById("speech-live").innerText = transcript;
                 
-                if (isFinalCommand) {
-                    const query = transcript.toLowerCase().trim();
+                document.getElementById("speech-live").innerText = currentTranscript;
+                
+                if (isFinalCommand && currentTranscript.trim() !== "") {
+                    const query = currentTranscript.toLowerCase().trim();
                     if (query.includes("python") || query.includes("paithen") || query.includes("पायथन") || query.includes("पायथॉन")) {
                         let cleanCmd = query.replace(/python|paithen|open|start|पायथन|पायथॉन|उघडा|चालू करा/g, "").trim();
                         function fireIntent(intentUrl, appName) {
